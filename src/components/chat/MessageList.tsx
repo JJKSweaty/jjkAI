@@ -16,53 +16,69 @@ interface MessageListProps {
 export function MessageList({ messages, streaming, threadId }: MessageListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const userNearBottomRef = useRef(true);
+  const previousMessageCountRef = useRef(messages.length);
+  const previousStreamingRef = useRef(streaming);
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+  // Always scroll to bottom - no user position tracking
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ block: 'end', behavior });
   };
 
-  // Track if user is near the bottom
+  // INSTANT scroll on new message (user sent message)
   useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
-      userNearBottomRef.current = distance < 120; // px threshold
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // On new messages or streaming: autoscroll if user is near bottom
-  // Debounce to avoid laggy scroll on every character
-  useEffect(() => {
-    if (!userNearBottomRef.current) return;
+    const newMessageAdded = messages.length > previousMessageCountRef.current;
     
-    const timeoutId = setTimeout(() => {
-      scrollToBottom(streaming ? 'smooth' : 'auto');
-    }, 100); // Debounce by 100ms
-    
-    return () => clearTimeout(timeoutId);
-  }, [messages, streaming]);
-
-  // Force scroll to bottom when streaming stops (message generation completes)
-  const previousStreaming = useRef(streaming);
-  useEffect(() => {
-    // If we were streaming but now we're not, force scroll to bottom
-    if (previousStreaming.current && !streaming) {
-      setTimeout(() => {
-        scrollToBottom('smooth');
-      }, 150); // Small delay to ensure content is fully rendered
+    if (newMessageAdded) {
+      // User just sent a message - scroll instantly to bottom
+      scrollToBottom('instant');
     }
-    previousStreaming.current = streaming;
+    
+    previousMessageCountRef.current = messages.length;
+  }, [messages.length]);
+
+  // CONTINUOUS auto-scroll during streaming (AI response)
+  useEffect(() => {
+    if (!streaming) return;
+    
+    // Keep scrolling to bottom while streaming
+    const intervalId = setInterval(() => {
+      scrollToBottom('smooth');
+    }, 50); // Update every 50ms for smooth tracking
+    
+    return () => clearInterval(intervalId);
   }, [streaming]);
 
-  // On thread change: force scroll to bottom
+  // Force scroll when streaming completes (message finished)
   useEffect(() => {
-    const id = requestAnimationFrame(() => scrollToBottom('smooth'));
-    return () => cancelAnimationFrame(id);
+    if (previousStreamingRef.current && !streaming) {
+      // Message generation just finished - scroll to bottom
+      setTimeout(() => {
+        scrollToBottom('smooth');
+      }, 50);
+    }
+    previousStreamingRef.current = streaming;
+  }, [streaming]);
+
+  // ALWAYS scroll to bottom on thread change (clicking existing chat)
+  useEffect(() => {
+    if (threadId !== null) {
+      // Give messages time to load, then scroll to bottom
+      setTimeout(() => {
+        scrollToBottom('instant');
+      }, 100);
+    }
   }, [threadId]);
+
+  // ALWAYS scroll to bottom when messages change or load
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Small delay to ensure content is rendered
+      const timeoutId = setTimeout(() => {
+        scrollToBottom('smooth');
+      }, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages]);
 
   if (messages.length === 0) {
     return null;
@@ -86,16 +102,16 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
                 className={cn(
                   "p-4 rounded-2xl max-w-[75%]",
                   message.role === 'assistant' 
-                    ? 'bg-muted/60 border-muted' 
+                    ? 'bg-muted/60 border border-primary/40' 
                     : 'bg-card border-border'
                 )}
               >
                 {isStreaming ? (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                     <span className="text-sm">Thinking...</span>
                   </div>

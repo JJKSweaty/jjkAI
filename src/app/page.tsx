@@ -58,22 +58,19 @@ export default function Page() {
     // Send with the threadId (either existing or newly created)
     if (threadId) {
       await send(text, threadId);
-      // Refresh sidebar after message is sent to show updated chat
-      await refreshThreads();
+      // No need to refresh - real-time subscriptions handle updates
     }
   };
 
   const handleNewChat = () => {
     setCurrentThreadId(null);
     clearMessages();
-    // Refresh sidebar to ensure all chats are visible
-    refreshThreads();
+    // No need to refresh - sidebar already has latest data from real-time updates
   };
 
   const handleThreadSelect = (threadId: string) => {
     setCurrentThreadId(threadId);
-    // Refresh sidebar when switching chats to show any new ones
-    refreshThreads();
+    // No need to refresh - real-time subscriptions keep sidebar up to date
   };
 
   if (loading) {

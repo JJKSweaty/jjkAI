@@ -175,9 +175,10 @@ export function EnhancedComposer({
 
           {/* Main Composer Card */}
           <Card className={cn(
-            'border border-border/20 shadow-sm rounded-2xl bg-background/95 backdrop-blur-sm transition-all duration-300',
-            // Focus ring when textarea is focused - thin glow
-            'focus-within:ring-1 focus-within:ring-primary/40 focus-within:border-primary/30'
+            'border shadow-sm rounded-2xl bg-background/95 backdrop-blur-sm transition-all duration-300',
+            // Brighter green border and ring for better visibility
+            'border-primary/60 ring-2 ring-primary/40',
+            'focus-within:ring-primary/60 focus-within:border-primary/80'
           )}>
             <CardContent className={cn(
               'transition-all duration-300 relative',
@@ -224,8 +225,58 @@ export function EnhancedComposer({
                     <TooltipContent>Attach file</TooltipContent>
                   </Tooltip>
 
-                  {/* Context button (only in expanded mode) */}
-                  {!hasThread && (
+                  {/* Model selector (compact mode) OR Context button (expanded mode) */}
+                  {hasThread ? (
+                    <Tooltip>
+                      <DropdownMenu>
+                        <TooltipTrigger asChild>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors"
+                            >
+                              {mode === 'Auto' ? (
+                                <Brain className="h-4 w-4" />
+                              ) : (
+                                <Settings className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {mode === 'Auto' ? 'Auto (AI selects)' : MODELS.find(m => m.id === currentModel)?.name}
+                        </TooltipContent>
+                        <DropdownMenuContent align="start" className="w-64">
+                          {/* Auto mode - first option */}
+                          <DropdownMenuItem onClick={() => setMode('Auto')}>
+                            <Brain className="h-4 w-4 mr-2" />
+                            <div className="flex flex-col">
+                              <span>Auto</span>
+                              <span className="text-xs text-muted-foreground">AI selects best model</span>
+                            </div>
+                          </DropdownMenuItem>
+                          
+                          <Separator className="my-1" />
+                          
+                          {/* Manual model selection */}
+                          {MODELS.map((model) => (
+                            <DropdownMenuItem
+                              key={model.id}
+                              onClick={() => {
+                                setMode('Manual');
+                                onModelChange?.(model.id);
+                              }}
+                              className="flex flex-col items-start"
+                            >
+                              <div className="font-medium">{model.name}</div>
+                              <div className="text-xs text-muted-foreground">{model.description}</div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </Tooltip>
+                  ) : (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 
@@ -312,7 +363,7 @@ export function EnhancedComposer({
                   <div className="flex items-center gap-2">
                     <Separator orientation="vertical" className="mx-1 h-5" />
 
-                    {/* Mode toggle */}
+                    {/* Model Selection - Auto is first, all specific models require Manual */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button 
@@ -321,15 +372,21 @@ export function EnhancedComposer({
                           className="gap-2 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50"
                         >
                           {mode === 'Auto' ? (
-                            <Brain className="h-4 w-4" />
+                            <>
+                              <Brain className="h-4 w-4" />
+                              Auto
+                            </>
                           ) : (
-                            <Settings className="h-4 w-4" />
+                            <>
+                              <Settings className="h-4 w-4" />
+                              {MODELS.find(m => m.id === currentModel)?.name || 'Select Model'}
+                            </>
                           )}
-                          {mode}
                           <ChevronDown className="h-4 w-4 opacity-70" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
+                      <DropdownMenuContent align="start" className="w-64">
+                        {/* Auto mode - first option */}
                         <DropdownMenuItem onClick={() => setMode('Auto')}>
                           <Brain className="h-4 w-4 mr-2" />
                           <div className="flex flex-col">
@@ -337,44 +394,25 @@ export function EnhancedComposer({
                             <span className="text-xs text-muted-foreground">AI selects best model</span>
                           </div>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setMode('Manual')}>
-                          <Settings className="h-4 w-4 mr-2" />
-                          <div className="flex flex-col">
-                            <span>Manual</span>
-                            <span className="text-xs text-muted-foreground">Choose specific model</span>
-                          </div>
-                        </DropdownMenuItem>
+                        
+                        <Separator className="my-1" />
+                        
+                        {/* Manual model selection */}
+                        {MODELS.map((model) => (
+                          <DropdownMenuItem
+                            key={model.id}
+                            onClick={() => {
+                              setMode('Manual');
+                              onModelChange?.(model.id);
+                            }}
+                            className="flex flex-col items-start"
+                          >
+                            <div className="font-medium">{model.name}</div>
+                            <div className="text-xs text-muted-foreground">{model.description}</div>
+                          </DropdownMenuItem>
+                        ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-
-                    {/* Model Selection (only in Manual mode) */}
-                    {mode === 'Manual' && currentModel && onModelChange && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="gap-2 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50"
-                          >
-                            <Settings className="h-4 w-4" />
-                            {MODELS.find(m => m.id === currentModel)?.name || 'Select Model'}
-                            <ChevronDown className="h-4 w-4 opacity-70" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-64">
-                          {MODELS.map((model) => (
-                            <DropdownMenuItem
-                              key={model.id}
-                              onClick={() => onModelChange(model.id)}
-                              className="flex flex-col items-start"
-                            >
-                              <div className="font-medium">{model.name}</div>
-                              <div className="text-xs text-muted-foreground">{model.description}</div>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
 
                     {/* Sources toggle */}
                     <DropdownMenu>

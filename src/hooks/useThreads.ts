@@ -17,6 +17,63 @@ export function useThreads() {
 
     console.log('useThreads: Fetching threads for user:', user.id);
     fetchThreads();
+
+    // REAL-TIME UPDATES: Subscribe to thread changes for multi-tab sync
+    const channel = supabase
+      .channel('threads_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'threads',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Real-time INSERT:', payload.new);
+          // Add new thread to the list if not already present
+          setThreads(prevThreads => {
+            const exists = prevThreads.some(t => t.id === payload.new.id);
+            if (exists) return prevThreads;
+            return [payload.new as Thread, ...prevThreads];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'threads',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Real-time UPDATE:', payload.new);
+          setThreads(prevThreads =>
+            prevThreads.map(t => t.id === payload.new.id ? payload.new as Thread : t)
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'threads',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Real-time DELETE:', payload.old);
+          setThreads(prevThreads => prevThreads.filter(t => t.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('useThreads: Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const fetchThreads = async () => {
@@ -61,8 +118,13 @@ export function useThreads() {
 
       if (error) throw error;
       
-      setThreads([data, ...threads]);
-      console.log('createThread: Thread added to state, total threads:', threads.length + 1);
+      // FIXED: Use functional update to avoid stale closure
+      setThreads(prevThreads => {
+        console.log('createThread: Adding to threads. Previous count:', prevThreads.length);
+        return [data, ...prevThreads];
+      });
+      
+      console.log('createThread: Thread created successfully:', data.id);
       return data;
     } catch (error) {
       console.error('Error creating thread:', error);
@@ -79,7 +141,10 @@ export function useThreads() {
 
       if (error) throw error;
       
-      setThreads(threads.map(t => t.id === threadId ? { ...t, ...updates } : t));
+      // FIXED: Use functional update to avoid stale closure
+      setThreads(prevThreads => 
+        prevThreads.map(t => t.id === threadId ? { ...t, ...updates } : t)
+      );
     } catch (error) {
       console.error('Error updating thread:', error);
     }
@@ -94,7 +159,8 @@ export function useThreads() {
 
       if (error) throw error;
       
-      setThreads(threads.filter(t => t.id !== threadId));
+      // FIXED: Use functional update to avoid stale closure
+      setThreads(prevThreads => prevThreads.filter(t => t.id !== threadId));
     } catch (error) {
       console.error('Error deleting thread:', error);
     }

@@ -28,38 +28,100 @@ const CLAUDE_MODELS = {
   }
 };
 
-// Minimal system prompt (< 50 tokens) for token efficiency
-const SYSTEM_INSTRUCTION = "Be concise. Use ≤150 words per reply. Avoid repeating context. Summarize when appropriate.";
+// CLAUDE TOKEN ECONOMY SYSTEM PROMPT
+// Compression Contract: Ultra-minimal, structured output rules
+const SYSTEM_INSTRUCTION = `You are Claude running under a strict Token Economy.
+Always:
+• Use ≤150 words (or one code block ≤120 lines)
+• Never repeat the user's text
+• Prefer 3 bullets over paragraphs; QA = bullets + one-line conclusion
+• If context is large, ask for scope or output a plan first, then wait
+• If unsure, ask one clarifying question (≤15 words)
+• For bugfix: Diagnosis (≤3 bullets) → Patch (one block) → Test (≤2 lines)
+• For summaries: 5 bullets, ≤20 words each
+• Stop generating when the answer is sufficient
+• Do not echo instructions or prior content unless explicitly asked`;
 
-// Determine optimal model based on request complexity
-function selectOptimalModel(messages: any[], requestedModel?: string): string {
-  if (requestedModel && CLAUDE_MODELS[requestedModel as keyof typeof CLAUDE_MODELS]) {
-    return requestedModel;
+// Task classification for intelligent routing and token caps
+type TaskClass = 'qa' | 'bugfix' | 'codegen-small' | 'codegen-large' | 'summarize' | 'plan' | 'detailed';
+
+function classifyTask(message: string): TaskClass {
+  const len = message.length;
+  
+  // Explicit detail request - preserve quality
+  if (/\b(detailed?|comprehensive|thorough|complete|explain\s+(in\s+)?detail|full\s+explanation|deep\s+dive|elaborate)\b/i.test(message)) {
+    return 'detailed';
   }
-
-  const lastMessage = messages[messages.length - 1]?.content || '';
-  const messageLength = lastMessage.length;
-  const hasCodeKeywords = /\b(code|function|class|algorithm|debug|error|implement|optimize)\b/i.test(lastMessage);
-  const hasComplexKeywords = /\b(analyze|complex|detailed|comprehensive|explain|reasoning|strategy)\b/i.test(lastMessage);
-
-  // AGGRESSIVE model routing: Default to Haiku (cheapest)
-  // Only use Sonnet for truly complex tasks
-  if (messageLength > 2000 || hasComplexKeywords) {
-    return 'claude-3-5-sonnet-latest'; // Complex reasoning
-  } else if (hasCodeKeywords && messageLength > 500) {
-    return 'claude-3-5-sonnet-latest'; // Code generation
-  } else {
-    return 'claude-3-5-haiku-latest'; // Everything else (80% of requests)
+  
+  // QA: Short questions, simple queries
+  if (len < 100 || /\b(what\s+is|who\s+is|when|where|define|yes\s+or\s+no|count|list)\b/i.test(message)) {
+    return 'qa';
   }
+  
+  // Bugfix: Error messages, debugging
+  if (/\b(error|bug|fix|broken|not\s+working|issue|debug|crash|exception)\b/i.test(message)) {
+    return 'bugfix';
+  }
+  
+  // Summarize: Condensing content
+  if (/\b(summarize|summary|tldr|brief|overview|key\s+points)\b/i.test(message)) {
+    return 'summarize';
+  }
+  
+  // Plan: Architecture, design, strategy
+  if (/\b(plan|strategy|approach|design|architecture|how\s+should\s+i)\b/i.test(message)) {
+    return 'plan';
+  }
+  
+  // Code generation: Large multi-file or >150 LOC
+  if (/\b(implement|create|build|write|generate|scaffold)\b/i.test(message) && len > 800) {
+    return 'codegen-large';
+  }
+  
+  // Code generation: Small single-file
+  if (/\b(code|function|class|component|implement|write\s+(a\s+)?function)\b/i.test(message)) {
+    return 'codegen-small';
+  }
+  
+  // Default to QA for efficiency
+  return 'qa';
 }
 
-// Aggressive token optimization: Summarize and compress context
-// BUT: Preserve quality when user explicitly requests detail
-function optimizeContext(messages: any[], requestedDetail: boolean = false): any[] {
+// Determine optimal model based on task class (ULTRA-AGGRESSIVE: 95% Haiku)
+function selectOptimalModel(taskClass: TaskClass, messageLength: number): string {
+  // Sonnet ONLY for: large codegen, detailed analysis, or complex reasoning
+  if (taskClass === 'codegen-large' || 
+      (taskClass === 'detailed' && messageLength > 1000)) {
+    return 'claude-3-5-sonnet-latest';
+  }
+  
+  // Everything else: Haiku (95%+ of requests)
+  return 'claude-3-5-haiku-latest';
+}
+
+// Get optimal max_tokens based on task class (TIGHT CAPS)
+function getMaxTokensByClass(taskClass: TaskClass): number {
+  const caps: Record<TaskClass, number> = {
+    'qa': 256,              // Short answers
+    'bugfix': 512,          // Diagnosis + patch + test
+    'codegen-small': 768,   // Single file/function
+    'codegen-large': 2048,  // Multi-file (Sonnet only)
+    'summarize': 256,       // 5 bullets
+    'plan': 512,            // Planning doc
+    'detailed': 4096        // User explicitly requested detail
+  };
+  
+  return caps[taskClass];
+}
+
+// AGGRESSIVE INPUT COMPRESSION: Rolling summary + context selector
+// Target: Keep conversation context ≤ 2,000 tokens by default
+function optimizeContext(messages: any[], taskClass: TaskClass): any[] {
   if (messages.length <= 2) return messages;
   
-  // If user wants detailed/comprehensive response, be less aggressive
-  const maxContextTokens = requestedDetail ? 4000 : 2000;
+  // Context budget based on task class
+  const maxContextTokens = taskClass === 'detailed' ? 4000 : 2000;
+  const maxRecentMessages = taskClass === 'detailed' ? 8 : 4;
   
   // Estimate tokens (1 token ≈ 4 characters)
   const estimateTokens = (text: string) => Math.ceil(text.length / 4);
@@ -71,9 +133,8 @@ function optimizeContext(messages: any[], requestedDetail: boolean = false): any
   // Start with just the current message
   const optimizedMessages = [lastMessage];
   
-  // Work backwards and keep recent, essential messages
+  // Work backwards and keep recent, essential messages (context selector)
   const recentMessages = [];
-  const maxRecentMessages = requestedDetail ? 8 : 4; // Keep more context for detailed requests
   
   for (let i = messages.length - 2; i >= 0 && recentMessages.length < maxRecentMessages; i--) {
     const msg = messages[i];
@@ -87,13 +148,13 @@ function optimizeContext(messages: any[], requestedDetail: boolean = false): any
     }
   }
   
-  // If we have older messages that were dropped, create a brief summary
+  // Rolling summary: If we dropped old messages, create ≤150-token summary
   const droppedCount = messages.length - recentMessages.length - 1;
-  if (droppedCount > 0 && !requestedDetail) {
-    // Only summarize if NOT a detailed request
+  if (droppedCount > 0 && taskClass !== 'detailed') {
+    const firstDroppedContent = messages[0].content?.substring(0, 50) || 'various topics';
     const summary = {
       role: 'assistant',
-      content: `[Context: ${droppedCount} earlier exchanges about ${messages[0].content?.substring(0, 50) || 'various topics'}...]`
+      content: `[Context: ${droppedCount} earlier exchanges about ${firstDroppedContent}. Key state preserved in recent turns.]`
     };
     return [summary, ...recentMessages, lastMessage];
   }
@@ -101,32 +162,14 @@ function optimizeContext(messages: any[], requestedDetail: boolean = false): any
   return [...recentMessages, lastMessage];
 }
 
-// Determine optimal max_tokens - Quality-aware limits
-function getOptimalMaxTokens(messages: any[], model: string): number {
-  const lastMessage = messages[messages.length - 1]?.content || '';
-  const modelConfig = CLAUDE_MODELS[model as keyof typeof CLAUDE_MODELS];
-  
-  // Check for EXPLICIT quality/detail requests - PRESERVE QUALITY
-  if (/\b(detailed?|comprehensive|thorough|complete|explain\s+(in\s+)?detail|full\s+explanation|deep\s+dive|elaborate)\b/i.test(lastMessage)) {
-    console.log('📝 Quality mode: User requested detailed response - using high token limit');
-    return Math.min(4096, modelConfig.maxTokens); // High limit for quality
+// Check input:output ratio and trigger re-compression if needed
+function checkTokenRatio(inputTokens: number, outputTokens: number): boolean {
+  const ratio = inputTokens / (outputTokens || 1);
+  if (ratio > 6) {
+    console.log(`⚠️  Token ratio ${ratio.toFixed(1)}:1 exceeds 6:1 threshold - consider summary`);
+    return true; // Should trigger summary
   }
-  
-  // Check for brevity requests - AGGRESSIVE SAVINGS
-  if (/\b(brief|short|concise|quick|summary|tldr|in\s+short)\b/i.test(lastMessage)) {
-    console.log('⚡ Speed mode: User requested brief response - using low token limit');
-    return 512; // Very short responses
-  }
-  
-  // Code generation - MODERATE LIMIT
-  if (/\b(code|function|class|implement|write\s+(a\s+)?function|create\s+(a\s+)?class)\b/i.test(lastMessage)) {
-    console.log('💻 Code mode: Detected code request - using moderate token limit');
-    return Math.min(2048, modelConfig.maxTokens);
-  }
-  
-  // Default: Balanced efficiency (768 tokens ≈ 600 words)
-  console.log('⚖️  Balanced mode: Using standard token limit');
-  return 768;
+  return false;
 }
 
 export async function registerChatRoutes(app: FastifyInstance) {
@@ -138,30 +181,32 @@ export async function registerChatRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'Invalid messages format' });
       }
 
-      // Optimize model selection based on mode and request complexity
-      let finalModel: string = body.model || 'claude-3-5-haiku-latest';
+      // STEP 1: TASK CLASSIFICATION (Pre-Flight Pipeline)
+      const lastMessage = body.messages[body.messages.length - 1]?.content || '';
+      const taskClass = classifyTask(lastMessage);
+      console.log(`📋 Task classified as: ${taskClass}`);
+
+      // STEP 2: MODEL SELECTION (Ultra-aggressive: 95% Haiku)
+      let finalModel: string;
       
       if (body.mode === 'auto' || !body.mode) {
-        // Auto mode: Use intelligent model selection
-        finalModel = selectOptimalModel(body.messages, body.model);
-        console.log(`🤖 Auto mode: Selected ${finalModel} for request`);
+        // Auto mode: Use task-based intelligent routing
+        finalModel = selectOptimalModel(taskClass, lastMessage.length);
+        console.log(`🤖 Auto mode: Selected ${finalModel} for ${taskClass} task`);
       } else {
         // Manual mode: Use the specified model
         finalModel = body.model || 'claude-3-5-haiku-latest';
         console.log(`⚙️  Manual mode: Using specified model ${finalModel}`);
       }
       
-      // AGGRESSIVE context optimization to reduce input tokens
-      // BUT: Detect if user wants detailed response and preserve quality
-      const lastMessage = body.messages[body.messages.length - 1]?.content || '';
-      const wantsDetail = /\b(detailed?|comprehensive|thorough|complete|explain\s+(in\s+)?detail|full\s+explanation|deep\s+dive|elaborate)\b/i.test(lastMessage);
+      // STEP 3: CONTEXT OPTIMIZATION (Input Compression)
+      // Target: ≤2,000 tokens, with rolling summary for old turns
+      const optimizedMessages = optimizeContext(body.messages, taskClass);
       
-      const optimizedMessages = optimizeContext(body.messages, wantsDetail);
-      
-      // Check cache for frequently asked questions
+      // STEP 4: CACHE CHECK (Zero-token serving)
       const cachedResponse = promptCache.get(optimizedMessages, finalModel);
       if (cachedResponse) {
-        console.log('✅ Serving cached response - ZERO API tokens used');
+        console.log('✅ Cache hit - ZERO API tokens used');
         
         // Set SSE headers
         reply.raw.writeHead(200, {
@@ -179,6 +224,7 @@ export async function registerChatRoutes(app: FastifyInstance) {
           usage: {
             ...cachedResponse.usage,
             cached: true,
+            taskClass,
             optimization: {
               originalModel: body.model,
               selectedModel: finalModel,
@@ -193,10 +239,14 @@ export async function registerChatRoutes(app: FastifyInstance) {
         return;
       }
       
-      // Set aggressive max_tokens limits for output
-      const maxTokens = getOptimalMaxTokens(optimizedMessages, finalModel);
+      // STEP 5: SET OUTPUT CAP (Tight max_tokens by task class)
+      const maxTokens = getMaxTokensByClass(taskClass);
       
-      console.log(`🚀 Token Optimization: ${body.model} → ${finalModel}, max_tokens: ${maxTokens}, messages: ${body.messages.length} → ${optimizedMessages.length} (${Math.round((1 - optimizedMessages.length / body.messages.length) * 100)}% reduction)`);
+      const reductionPercent = body.messages.length > 1 
+        ? Math.round((1 - optimizedMessages.length / body.messages.length) * 100) 
+        : 0;
+      
+      console.log(`🚀 Token Economy: ${taskClass} → ${finalModel} | max_tokens: ${maxTokens} | context: ${body.messages.length} → ${optimizedMessages.length} msgs (${reductionPercent}% reduction)`);
 
       // Set SSE headers with CORS
       reply.raw.writeHead(200, {
@@ -234,8 +284,19 @@ export async function registerChatRoutes(app: FastifyInstance) {
           const outputTokens = message.usage.output_tokens;
           const estimatedCost = (inputTokens * modelConfig.inputPrice + outputTokens * modelConfig.outputPrice) / 1000000;
           
+          // Check token ratio (should be ≤6:1)
+          checkTokenRatio(inputTokens, outputTokens);
+          
+          // Calculate efficiency metrics
           const tokenReduction = body.messages.length > 0 ? Math.round((1 - optimizedMessages.length / body.messages.length) * 100) : 0;
-          console.log(`✅ Request complete: ${finalModel}, Input: ${inputTokens} tokens, Output: ${outputTokens} tokens, Cost: $${estimatedCost.toFixed(6)}, Context reduction: ${tokenReduction}%`);
+          const capUtilization = Math.round((outputTokens / maxTokens) * 100);
+          
+          console.log(`✅ Complete: ${finalModel} | ${taskClass} | In: ${inputTokens} | Out: ${outputTokens} | Cost: $${estimatedCost.toFixed(6)} | Cap: ${capUtilization}% | Reduction: ${tokenReduction}%`);
+          
+          // Flag low cap utilization (might be over-provisioned)
+          if (capUtilization < 30) {
+            console.log(`💡 Cap underutilized (${capUtilization}%) - consider lowering max_tokens for ${taskClass}`);
+          }
           
           // Cache the response for future use
           promptCache.set(optimizedMessages, finalModel || 'claude-3-5-haiku-latest', fullResponse, {
@@ -253,12 +314,14 @@ export async function registerChatRoutes(app: FastifyInstance) {
                 outputTokens,
                 model: finalModel,
                 estimatedCost,
+                taskClass,
                 optimization: {
                   originalModel: body.model,
                   selectedModel: finalModel,
                   originalMessages: body.messages.length,
                   optimizedMessages: optimizedMessages.length,
                   maxTokens,
+                  capUtilization: `${capUtilization}%`,
                   tokenReduction: `${tokenReduction}%`,
                   cached: false
                 }
