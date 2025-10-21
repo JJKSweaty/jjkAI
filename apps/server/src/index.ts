@@ -19,14 +19,14 @@ await app.register(cors, {
 // Register routes
 registerChatRoutes(app);
 
-const port = Number(process.env.PORT) || 8787;
+const port = Number(process.env.PORT || 8080);
 const host = '0.0.0.0';
 
 try {
   await app.listen({ port, host });
-  console.log(`✅ Server running on http://localhost:${port}`);
-  console.log(`📡 Health check: http://localhost:${port}/health`);
-  console.log(`💬 Chat endpoint: http://localhost:${port}/api/chat/stream`);
+  console.log(`✅ Server running on ${host}:${port}`);
+  console.log(`📡 Health check: /health`);
+  console.log(`💬 Chat endpoint: /api/chat/stream`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);
