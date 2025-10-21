@@ -46,6 +46,18 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
     return () => clearTimeout(timeoutId);
   }, [messages, streaming]);
 
+  // Force scroll to bottom when streaming stops (message generation completes)
+  const previousStreaming = useRef(streaming);
+  useEffect(() => {
+    // If we were streaming but now we're not, force scroll to bottom
+    if (previousStreaming.current && !streaming) {
+      setTimeout(() => {
+        scrollToBottom('smooth');
+      }, 150); // Small delay to ensure content is fully rendered
+    }
+    previousStreaming.current = streaming;
+  }, [streaming]);
+
   // On thread change: force scroll to bottom
   useEffect(() => {
     const id = requestAnimationFrame(() => scrollToBottom('smooth'));
@@ -91,7 +103,7 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
                   <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
                   <ReactMarkdown
                     components={{
-                      code({ node, inline, className, children, ...props }) {
+                      code({ inline, className, children, ...props }: any) {
                         const match = /language-(\w+)/.exec(className || '');
                         const codeString = String(children).replace(/\n$/, '');
                         

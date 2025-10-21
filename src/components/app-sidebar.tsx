@@ -162,9 +162,7 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
           <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {threadsLoading ? (
-                <div className="px-4 py-2 text-sm text-muted-foreground">Loading...</div>
-              ) : threads.length === 0 ? (
+              {threadsLoading ? null : threads.length === 0 ? (
                 <div className="px-4 py-2 text-sm text-muted-foreground">No chats yet</div>
               ) : (
                 threads.slice(0, 10).map((thread) => (
