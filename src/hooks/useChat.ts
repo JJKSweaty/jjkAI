@@ -3,6 +3,8 @@ import { streamChat } from '@/lib/sse';
 import { Message } from '@/lib/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 import { useMessages } from './useMessages';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from './useAuth';
 
 // Model pricing per million tokens (input/output)
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
@@ -27,6 +29,63 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [usage, setUsage] = useState({ tokens: 0, cost: 0 });
   const { messages, setMessages, saveMessages, loading } = useMessages(threadId);
+  const { user } = useAuth();
+
+  // Load total usage when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      loadTotalUsage();
+    } else {
+      // Reset usage when user logs out
+      setUsage({ tokens: 0, cost: 0 });
+    }
+  }, [user]);
+
+  const loadTotalUsage = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('usage')
+        .select('input_tokens, output_tokens, cost')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading usage:', error);
+        return;
+      }
+
+      const totalTokens = data.reduce((sum, usage) => sum + usage.input_tokens + usage.output_tokens, 0);
+      const totalCost = data.reduce((sum, usage) => sum + usage.cost, 0);
+
+      setUsage({ tokens: totalTokens, cost: totalCost });
+    } catch (error) {
+      console.error('Error loading usage:', error);
+    }
+  };
+
+  const saveUsage = async (inputTokens: number, outputTokens: number, cost: number, activeThreadId?: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('usage')
+        .insert({
+          user_id: user.id,
+          thread_id: activeThreadId || null,
+          model,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cost,
+        });
+
+      if (error) {
+        console.error('Error saving usage:', error);
+      }
+    } catch (error) {
+      console.error('Error saving usage:', error);
+    }
+  };
 
   async function send(text: string, overrideThreadId?: string) {
     if (!text.trim() || streaming) return;
@@ -40,9 +99,13 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     let reply: Message = { role: 'assistant', content: '' };
     setMessages([...newMessages, reply]);
 
+    // Get composer mode from localStorage
+    const mode = (typeof window !== 'undefined' && localStorage.getItem('composer-mode') === 'Manual') ? 'manual' : 'auto';
+
     await streamChat({
       model,
       messages: newMessages,
+      mode,
       onToken: (token: string) => {
         reply.content += token;
         setMessages([...newMessages, { ...reply }]);
@@ -50,11 +113,20 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
       onDone: async (metadata?: { inputTokens?: number; outputTokens?: number }) => {
         setStreaming(false);
         
-        // Calculate usage
-        if (metadata) {
-          const totalTokens = (metadata.inputTokens || 0) + (metadata.outputTokens || 0);
-          const cost = calculateCost(model, metadata.inputTokens || 0, metadata.outputTokens || 0);
-          setUsage({ tokens: totalTokens, cost });
+        // Calculate and save usage
+        if (metadata && user) {
+          const inputTokens = metadata.inputTokens || 0;
+          const outputTokens = metadata.outputTokens || 0;
+          const cost = calculateCost(model, inputTokens, outputTokens);
+          
+          // Save usage to database
+          await saveUsage(inputTokens, outputTokens, cost, activeThreadId || undefined);
+          
+          // Update local state with new totals
+          setUsage(prev => ({
+            tokens: prev.tokens + inputTokens + outputTokens,
+            cost: prev.cost + cost
+          }));
         }
         
         // Save both user message and assistant reply to database
@@ -74,6 +146,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
 
   function clearMessages() {
     setMessages([]);
+    // Don't reset usage when clearing messages - keep cumulative total
   }
 
   return { messages, send, streaming, model, setModel, clearMessages, loading, usage };

@@ -112,7 +112,7 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
       {/* Header: JJK.AI branding */}
       <SidebarHeader>
         <div className="px-4 py-3 flex items-center justify-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-red-500 via-red-600 to-red-700 bg-clip-text text-transparent group-data-[collapsible=icon]:text-base">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 via-green-500 to-green-600 bg-clip-text text-transparent group-data-[collapsible=icon]:text-base">
             <span className="group-data-[collapsible=icon]:hidden">JJK.AI</span>
             <span className="hidden group-data-[collapsible=icon]:inline">JJK</span>
           </h1>

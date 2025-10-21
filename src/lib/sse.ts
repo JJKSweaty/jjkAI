@@ -1,14 +1,14 @@
 import { ChatStreamOptions, StreamEvent } from './types';
 
-export async function streamChat({ model, messages, onToken, onDone, onError }: ChatStreamOptions) {
+export async function streamChat({ model, messages, mode, onToken, onDone, onError }: ChatStreamOptions) {
   try {
     console.log('Connecting to:', `${process.env.NEXT_PUBLIC_API_BASE}/api/chat/stream`);
-    console.log('Sending:', { model, messages });
+    console.log('Sending:', { model, messages, mode });
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages }),
+      body: JSON.stringify({ model, messages, mode }),
     });
 
     console.log('Response status:', res.status);

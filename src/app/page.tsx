@@ -101,7 +101,7 @@ export default function Page() {
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <SidebarTrigger />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-red-500 via-red-600 to-red-700 bg-clip-text text-transparent animate-glow hover:scale-110 transition-transform cursor-pointer">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 via-green-500 to-green-600 bg-clip-text text-transparent animate-glow hover:scale-110 transition-transform cursor-pointer">
               JJK.AI
             </h1>
             <ModelSwitcher 
@@ -122,7 +122,13 @@ export default function Page() {
         /* Centered composer when empty */
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-4xl px-4">
-            <EnhancedComposer onSend={handleSend} disabled={streaming} />
+            <EnhancedComposer 
+              onSend={handleSend} 
+              disabled={streaming} 
+              hasThread={false}
+              currentModel={model}
+              onModelChange={setModel}
+            />
           </div>
         </div>
       ) : (
@@ -130,10 +136,16 @@ export default function Page() {
         <div className="flex-1 flex flex-col">
           <MessageList messages={messages} streaming={streaming} threadId={currentThreadId} />
           
-          {/* Composer - sticky bar outside scroller */}
-          <div className="sticky bottom-0 z-20 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <div className="mx-auto max-w-4xl px-4 py-3">
-              <EnhancedComposer onSend={handleSend} disabled={streaming} />
+          {/* Composer - unified backdrop strip to prevent compositing seams */}
+          <div className="sticky bottom-0 z-20 bg-background border-t border-border/50">
+            <div className="mx-auto px-4 py-3">
+              <EnhancedComposer 
+                onSend={handleSend} 
+                disabled={streaming} 
+                hasThread={true}
+                currentModel={model}
+                onModelChange={setModel}
+              />
             </div>
           </div>
         </div>

@@ -16,15 +16,9 @@ interface UsageBadgeProps {
 }
 
 export function UsageBadge({ tokens = 0, cost = 0 }: UsageBadgeProps) {
-  const [totalTokens, setTotalTokens] = useState(0);
-  const [totalCost, setTotalCost] = useState(0);
-
-  useEffect(() => {
-    // Accumulate tokens and cost
-    if (tokens > 0) setTotalTokens(prev => prev + tokens);
-    if (cost > 0) setTotalCost(prev => prev + cost);
-  }, [tokens, cost]);
-
+  // Don't accumulate - just display the values passed from useChat
+  // The useChat hook already loads cumulative totals from the database
+  
   return (
     <TooltipProvider>
       <Tooltip>
@@ -33,19 +27,22 @@ export function UsageBadge({ tokens = 0, cost = 0 }: UsageBadgeProps) {
             <Activity className="h-4 w-4 text-primary" />
             <div className="flex items-center gap-2 text-sm">
               <span className="font-medium text-foreground">
-                {formatTokens(totalTokens)}
+                {formatTokens(tokens)}
               </span>
               <span className="text-muted-foreground">•</span>
               <span className="font-medium text-primary">
-                {formatCost(totalCost)}
+                {formatCost(cost)}
               </span>
             </div>
           </div>
         </TooltipTrigger>
         <TooltipContent>
           <div className="text-xs space-y-1">
-            <div>Total Tokens: {totalTokens.toLocaleString()}</div>
-            <div>Total Cost: {formatCost(totalCost)}</div>
+            <div>Lifetime Tokens: {tokens.toLocaleString()}</div>
+            <div>Lifetime Cost: {formatCost(cost)}</div>
+            <div className="text-muted-foreground mt-2 pt-2 border-t">
+              All-time usage across all conversations
+            </div>
           </div>
         </TooltipContent>
       </Tooltip>

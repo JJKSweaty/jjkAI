@@ -6,6 +6,7 @@ export interface Message {
 export interface ChatRequest {
   model?: string;
   messages: Message[];
+  mode?: 'auto' | 'manual';
 }
 
 export interface StreamEvent {

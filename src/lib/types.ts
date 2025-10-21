@@ -11,6 +11,7 @@ export interface UsageMetadata {
 export interface ChatStreamOptions {
   model: string;
   messages: Message[];
+  mode?: 'auto' | 'manual';
   onToken: (text: string) => void;
   onDone: (usage?: UsageMetadata) => void;
   onError: (error: string) => void;
