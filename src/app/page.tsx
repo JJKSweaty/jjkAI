@@ -7,6 +7,7 @@ import { EnhancedComposer } from '@/components/chat/EnhancedComposer';
 import { MessageList } from '@/components/chat/MessageList';
 import { ModelSwitcher } from '@/components/chat/ModelSwitcher';
 import { UsageBadge } from '@/components/chat/UsageBadge';
+import { ContinuationPrompt } from '@/components/chat/ContinuationPrompt';
 import { useRouter } from 'next/navigation';
 import { SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -17,7 +18,7 @@ export default function Page() {
   const { user, loading, signOut } = useAuth();
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const { threads, createThread, deleteThread, updateThread, refreshThreads } = useThreads();
-  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage, depthMode, setDepthMode, conversationSummary } = useChat({
+  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage, depthMode, setDepthMode, conversationSummary, continuationPrompt, forceContinue, cancelContinuation } = useChat({
     threadId: currentThreadId,
     onMessageSaved: () => refreshThreads(),
   });
@@ -135,6 +136,20 @@ export default function Page() {
         /* Messages with separate scroller and sticky composer */
         <div className="flex-1 flex flex-col">
           <MessageList messages={messages} streaming={streaming} threadId={currentThreadId} />
+          
+          {/* Continuation Prompt - Show only when cost is high */}
+          {continuationPrompt?.show && (
+            <div className="sticky bottom-[76px] z-30 px-4 pb-3">
+              <ContinuationPrompt
+                message={continuationPrompt.message}
+                cost={continuationPrompt.cost}
+                continuationCount={continuationPrompt.continuationCount}
+                onContinue={forceContinue}
+                onCancel={cancelContinuation}
+                isLoading={streaming}
+              />
+            </div>
+          )}
           
           {/* Composer - unified backdrop strip to prevent compositing seams */}
           <div className="sticky bottom-0 z-20 bg-background border-t border-border/50">

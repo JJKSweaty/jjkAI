@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { anthropic } from '../lib/anthropic.js';
 import { ChatRequest } from '../utils/types.js';
 import { promptCache } from '../utils/promptCache.js';
+import { autoContinuation } from '../utils/autoContinuation.js';
 
 // Claude model pricing and capabilities
 const CLAUDE_MODELS = {
@@ -29,18 +30,16 @@ const CLAUDE_MODELS = {
 };
 
 // CLAUDE TOKEN ECONOMY SYSTEM PROMPT
-// Compression Contract: Ultra-minimal, structured output rules
-const SYSTEM_INSTRUCTION = `You are Claude running under a strict Token Economy.
-Always:
-• Use ≤150 words (or one code block ≤120 lines)
-• Never repeat the user's text
-• Prefer 3 bullets over paragraphs; QA = bullets + one-line conclusion
-• If context is large, ask for scope or output a plan first, then wait
-• If unsure, ask one clarifying question (≤15 words)
-• For bugfix: Diagnosis (≤3 bullets) → Patch (one block) → Test (≤2 lines)
-• For summaries: 5 bullets, ≤20 words each
-• Stop generating when the answer is sufficient
-• Do not echo instructions or prior content unless explicitly asked`;
+// Ultra-compact: Focus on output efficiency
+const SYSTEM_INSTRUCTION = `Token-optimized assistant. Rules:
+• ≤150 words OR 1 code block ≤120 lines
+• Never repeat user text
+• Prefer bullets over prose
+• Ask 1 question if unclear (≤15 words)
+• Bugfix: 3 bullets → code → test (≤2 lines)
+• Summaries: 5 bullets, ≤20 words each
+• Stop when sufficient
+• No echoing instructions`;
 
 // Task classification for intelligent routing and token caps
 type TaskClass = 'qa' | 'bugfix' | 'codegen-small' | 'codegen-large' | 'summarize' | 'plan' | 'detailed';
@@ -268,6 +267,7 @@ export async function registerChatRoutes(app: FastifyInstance) {
         });
 
         let fullResponse = '';
+        let finishReason = 'stop';
 
         // Handle text deltas
         stream.on('text', (text) => {
@@ -278,11 +278,14 @@ export async function registerChatRoutes(app: FastifyInstance) {
         });
 
         // Handle completion
-        stream.on('message', (message) => {
+        stream.on('message', async (message) => {
           const modelConfig = CLAUDE_MODELS[finalModel as keyof typeof CLAUDE_MODELS] || CLAUDE_MODELS['claude-3-5-haiku-latest'];
           const inputTokens = message.usage.input_tokens;
           const outputTokens = message.usage.output_tokens;
           const estimatedCost = (inputTokens * modelConfig.inputPrice + outputTokens * modelConfig.outputPrice) / 1000000;
+          
+          // Capture finish reason for continuation check
+          finishReason = message.stop_reason || 'stop';
           
           // Check token ratio (should be ≤6:1)
           checkTokenRatio(inputTokens, outputTokens);
@@ -305,6 +308,66 @@ export async function registerChatRoutes(app: FastifyInstance) {
             model: finalModel || 'claude-3-5-haiku-latest',
             estimatedCost
           });
+          
+          // Check if we need auto-continuation (response cut off)
+          if (finishReason === 'max_tokens' || (outputTokens >= maxTokens * 0.95)) {
+            console.log(`🔄 Response hit token limit (${finishReason}) - attempting auto-continuation...`);
+            
+            const continuationResult = await autoContinuation.handleContinuation(
+              {
+                model: finalModel,
+                max_tokens: maxTokens,
+                temperature: 0.7,
+                messages: optimizedMessages
+              },
+              fullResponse,
+              finishReason,
+              body.threadId || 'default',
+              taskClass  // Pass task class for limit calculation
+            );
+
+            if (continuationResult.promptUser) {
+              // User has hit continuation limit - ask if they want to continue
+              // This should be EXTREMELY rare now (100+ continuations)
+              console.log(`⚠️  Continuation limit reached. Cost so far: $${continuationResult.cost?.toFixed(4)}`);
+              
+              if (!streamEnded && !reply.raw.writableEnded) {
+                reply.raw.write(`data: ${JSON.stringify({ 
+                  type: 'continuation_prompt',
+                  message: 'This is an extremely long response. Continue generating?',
+                  cost: continuationResult.cost,
+                  continuationCount: autoContinuation.getContinuationCount(body.threadId || 'default')
+                })}\n\n`);
+              }
+            } else if (continuationResult.shouldContinue && continuationResult.continuationRequest) {
+              try {
+                // Auto-continue without prompting
+                const currentCount = autoContinuation.getContinuationCount(body.threadId || 'default') + 1;
+                const maxCount = taskClass === 'detailed' ? 100 : taskClass === 'codegen-large' ? 100 : taskClass === 'codegen-small' ? 50 : taskClass === 'bugfix' ? 50 : taskClass === 'plan' ? 50 : 20;
+                console.log(`🔄 Auto-continuing (${currentCount}/${maxCount})...`);
+                
+                const contStream = anthropic.messages.stream(continuationResult.continuationRequest);
+                
+                let continuationText = '';
+                
+                contStream.on('text', (text) => {
+                  continuationText += text;
+                  fullResponse += text;
+                  if (!streamEnded && !reply.raw.writableEnded) {
+                    reply.raw.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+                  }
+                });
+                
+                contStream.on('message', (contMessage) => {
+                  console.log(`✅ Continuation complete: +${contMessage.usage.output_tokens} tokens`);
+                });
+                
+                await contStream.finalMessage();
+              } catch (contError) {
+                console.error('Continuation error:', contError);
+              }
+            }
+          }
           
           if (!streamEnded && !reply.raw.writableEnded) {
             reply.raw.write(`data: ${JSON.stringify({ 
@@ -372,5 +435,89 @@ export async function registerChatRoutes(app: FastifyInstance) {
       models: CLAUDE_MODELS,
       timestamp: new Date().toISOString()
     };
+  });
+
+  // Force continuation endpoint (when user explicitly requests to continue)
+  app.post('/api/chat/continue', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = req.body as { 
+        threadId: string; 
+        previousResponse: string;
+        model?: string;
+        maxTokens?: number;
+      };
+
+      const continuationResult = await autoContinuation.forceContinuation(
+        {
+          model: body.model || 'claude-3-5-haiku-latest',
+          max_tokens: body.maxTokens || 2048,
+          temperature: 0.7,
+        },
+        body.previousResponse,
+        body.threadId
+      );
+
+      // Set SSE headers
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': req.headers.origin || '*',
+        'Access-Control-Allow-Credentials': 'true',
+      });
+
+      let streamEnded = false;
+
+      try {
+        const stream = anthropic.messages.stream(continuationResult.continuationRequest);
+
+        let fullResponse = '';
+
+        stream.on('text', (text) => {
+          fullResponse += text;
+          if (!streamEnded && !reply.raw.writableEnded) {
+            reply.raw.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+          }
+        });
+
+        stream.on('message', (message) => {
+          console.log(`✅ Forced continuation complete: ${message.usage.output_tokens} tokens`);
+          
+          if (!streamEnded && !reply.raw.writableEnded) {
+            reply.raw.write(`data: ${JSON.stringify({ 
+              type: 'done',
+              usage: {
+                inputTokens: message.usage.input_tokens,
+                outputTokens: message.usage.output_tokens,
+              }
+            })}\n\n`);
+            streamEnded = true;
+            reply.raw.end();
+          }
+        });
+
+        stream.on('error', (err) => {
+          console.error('Continuation stream error:', err);
+          if (!streamEnded && !reply.raw.writableEnded) {
+            reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: String(err) })}\n\n`);
+            streamEnded = true;
+            reply.raw.end();
+          }
+        });
+
+        await stream.finalMessage();
+
+      } catch (streamError) {
+        console.error('Continuation error:', streamError);
+        if (!streamEnded && !reply.raw.writableEnded) {
+          reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to continue' })}\n\n`);
+          streamEnded = true;
+          reply.raw.end();
+        }
+      }
+    } catch (err) {
+      console.error('Continue request error:', err);
+      return reply.code(500).send({ error: 'Internal server error' });
+    }
   });
 }

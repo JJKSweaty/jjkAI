@@ -49,6 +49,13 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
   const [depthMode, setDepthMode] = useState<DepthMode>('Standard');
   const [usage, setUsage] = useState<ChatUsage>({ tokens: 0, cost: 0 });
   const [conversationSummary, setConversationSummary] = useState<ConversationSummary | null>(null);
+  const [continuationPrompt, setContinuationPrompt] = useState<{
+    show: boolean;
+    message: string;
+    cost: number;
+    continuationCount: number;
+    currentResponse: string;
+  } | null>(null);
   const { messages, setMessages, saveMessages, loading } = useMessages(threadId);
   const { user } = useAuth();
 
@@ -177,6 +184,20 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
           budget: prev.budget ? { ...prev.budget, used: currentOutput } : undefined
         }));
       },
+      onContinuationPrompt: (data) => {
+        // Only show for EXTREME costs (>$0.50) - effectively never for coding
+        // 100 continuations = ~$0.50, so this rarely triggers
+        if (data.cost > 0.50) {
+          setContinuationPrompt({
+            show: true,
+            message: data.message,
+            cost: data.cost,
+            continuationCount: data.continuationCount,
+            currentResponse: reply.content
+          });
+          setStreaming(false); // Pause streaming
+        }
+      },
       onDone: async (metadata?: { 
         inputTokens?: number; 
         outputTokens?: number;
@@ -225,6 +246,85 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     // Don't reset usage when clearing messages - keep cumulative total
   }
 
+  async function forceContinue() {
+    if (!continuationPrompt) return;
+
+    const activeThreadId = threadId;
+    setContinuationPrompt(null);
+    setStreaming(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/chat/continue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId: activeThreadId || 'default',
+          previousResponse: continuationPrompt.currentResponse,
+          model,
+          maxTokens: 2048
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      // Find the current assistant message
+      let reply = messages[messages.length - 1];
+      if (reply.role !== 'assistant') {
+        reply = { role: 'assistant', content: continuationPrompt.currentResponse };
+      }
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          if (!part.startsWith('data:')) continue;
+          
+          try {
+            const evt = JSON.parse(part.slice(5));
+            
+            if (evt.type === 'delta' && evt.text) {
+              reply.content += evt.text;
+              const updatedMessages = [...messages.slice(0, -1), reply];
+              setMessages(updatedMessages);
+            }
+            if (evt.type === 'done') {
+              setStreaming(false);
+              // Save the completed message
+              if (activeThreadId) {
+                await saveMessages([reply], activeThreadId);
+                onMessageSaved?.();
+              }
+            }
+            if (evt.type === 'error') {
+              setStreaming(false);
+              console.error('Continuation error:', evt.message);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse SSE event:', parseError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Force continue error:', error);
+      setStreaming(false);
+    }
+  }
+
+  function cancelContinuation() {
+    setContinuationPrompt(null);
+  }
+
   return { 
     messages, 
     send, 
@@ -236,6 +336,9 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     usage,
     depthMode,
     setDepthMode,
-    conversationSummary
+    conversationSummary,
+    continuationPrompt,
+    forceContinue,
+    cancelContinuation
   };
 }

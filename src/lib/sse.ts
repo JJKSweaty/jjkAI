@@ -4,6 +4,7 @@ import { DepthMode, ConversationSummary } from './tokenOptimization';
 interface EnhancedChatStreamOptions extends ChatStreamOptions {
   depthMode?: DepthMode;
   conversationSummary?: ConversationSummary | null;
+  onContinuationPrompt?: (data: { message: string; cost: number; continuationCount: number }) => void;
 }
 
 export async function streamChat({ 
@@ -14,7 +15,8 @@ export async function streamChat({
   conversationSummary,
   onToken, 
   onDone, 
-  onError 
+  onError,
+  onContinuationPrompt
 }: EnhancedChatStreamOptions) {
   try {
     console.log('Connecting to:', `${process.env.NEXT_PUBLIC_API_BASE}/api/chat/stream`);
@@ -66,6 +68,13 @@ export async function streamChat({
           }
           if (evt.type === 'error' && evt.message) {
             onError(evt.message);
+          }
+          if (evt.type === 'continuation_prompt' && onContinuationPrompt) {
+            onContinuationPrompt({
+              message: (evt as any).message,
+              cost: (evt as any).cost,
+              continuationCount: (evt as any).continuationCount
+            });
           }
         } catch (parseError) {
           console.error('Failed to parse SSE event:', parseError);

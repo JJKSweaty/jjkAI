@@ -18,8 +18,10 @@ export interface ChatStreamOptions {
 }
 
 export interface StreamEvent {
-  type: 'delta' | 'done' | 'error';
+  type: 'delta' | 'done' | 'error' | 'continuation_prompt';
   text?: string;
   message?: string;
   usage?: UsageMetadata;
+  cost?: number;
+  continuationCount?: number;
 }
