@@ -5,6 +5,12 @@ import { DEFAULT_MODEL } from '@/lib/constants';
 import { useMessages } from './useMessages';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './useAuth';
+import { 
+  DepthMode, 
+  TokenManager, 
+  ConversationOptimizer,
+  ConversationSummary 
+} from '@/lib/tokenOptimization';
 
 // Model pricing per million tokens (input/output)
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
@@ -24,12 +30,45 @@ interface UseChatOptions {
   onMessageSaved?: () => void;
 }
 
+interface ChatUsage {
+  tokens: number;
+  cost: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  depthMode?: DepthMode;
+  budget?: {
+    maxInput: number;
+    maxOutput: number;
+    used: number;
+  };
+}
+
 export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadId: null }) {
   const [streaming, setStreaming] = useState(false);
   const [model, setModel] = useState(DEFAULT_MODEL);
-  const [usage, setUsage] = useState({ tokens: 0, cost: 0 });
+  const [depthMode, setDepthMode] = useState<DepthMode>('Standard');
+  const [usage, setUsage] = useState<ChatUsage>({ tokens: 0, cost: 0 });
+  const [conversationSummary, setConversationSummary] = useState<ConversationSummary | null>(null);
   const { messages, setMessages, saveMessages, loading } = useMessages(threadId);
   const { user } = useAuth();
+
+  // Initialize optimizers
+  const tokenManager = new TokenManager(model);
+  const conversationOptimizer = new ConversationOptimizer();
+
+  // Update conversation summary when messages change
+  useEffect(() => {
+    if (messages.length > 8) {
+      conversationOptimizer.createRollingSummary(messages).then(summary => {
+        setConversationSummary(summary);
+      });
+    }
+  }, [messages.length]);
+
+  // Auto-detect depth mode based on user message
+  const detectDepthMode = (message: string): DepthMode => {
+    return tokenManager.planDepthMode(message, depthMode);
+  };
 
   // Load total usage when component mounts or user changes
   useEffect(() => {
@@ -96,6 +135,25 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     setMessages(newMessages);
     setStreaming(true);
 
+    // Auto-detect or use selected depth mode
+    const selectedDepthMode = detectDepthMode(text);
+    const budget = tokenManager.getTokenBudget(selectedDepthMode);
+    
+    // Estimate input tokens for budget display
+    const estimatedInput = tokenManager.estimateTokens(JSON.stringify(newMessages));
+    const maxOutput = tokenManager.calculateMaxOutput(estimatedInput, budget.maxOutput, budget.safetyMargin);
+
+    // Update usage with budget info
+    setUsage(prev => ({
+      ...prev,
+      depthMode: selectedDepthMode,
+      budget: {
+        maxInput: budget.maxInput,
+        maxOutput: maxOutput,
+        used: 0
+      }
+    }));
+
     let reply: Message = { role: 'assistant', content: '' };
     setMessages([...newMessages, reply]);
 
@@ -106,17 +164,31 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
       model,
       messages: newMessages,
       mode,
+      depthMode: selectedDepthMode,
+      conversationSummary,
       onToken: (token: string) => {
         reply.content += token;
         setMessages([...newMessages, { ...reply }]);
+        
+        // Update token usage in real-time
+        const currentOutput = tokenManager.estimateTokens(reply.content);
+        setUsage(prev => ({
+          ...prev,
+          budget: prev.budget ? { ...prev.budget, used: currentOutput } : undefined
+        }));
       },
-      onDone: async (metadata?: { inputTokens?: number; outputTokens?: number }) => {
+      onDone: async (metadata?: { 
+        inputTokens?: number; 
+        outputTokens?: number;
+        depthMode?: DepthMode;
+        compressed?: boolean;
+      }) => {
         setStreaming(false);
         
         // Calculate and save usage
         if (metadata && user) {
-          const inputTokens = metadata.inputTokens || 0;
-          const outputTokens = metadata.outputTokens || 0;
+          const inputTokens = metadata.inputTokens || estimatedInput;
+          const outputTokens = metadata.outputTokens || tokenManager.estimateTokens(reply.content);
           const cost = calculateCost(model, inputTokens, outputTokens);
           
           // Save usage to database
@@ -125,7 +197,11 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
           // Update local state with new totals
           setUsage(prev => ({
             tokens: prev.tokens + inputTokens + outputTokens,
-            cost: prev.cost + cost
+            cost: prev.cost + cost,
+            inputTokens,
+            outputTokens,
+            depthMode: metadata.depthMode || selectedDepthMode,
+            budget: prev.budget
           }));
         }
         
@@ -149,5 +225,17 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     // Don't reset usage when clearing messages - keep cumulative total
   }
 
-  return { messages, send, streaming, model, setModel, clearMessages, loading, usage };
+  return { 
+    messages, 
+    send, 
+    streaming, 
+    model, 
+    setModel, 
+    clearMessages, 
+    loading, 
+    usage,
+    depthMode,
+    setDepthMode,
+    conversationSummary
+  };
 }

@@ -36,6 +36,15 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MODELS } from '@/lib/constants';
+import { DepthMode } from '@/lib/tokenOptimization';
+import { DepthModeSelector, TokenBudgetDisplay } from './DepthModeSelector';
+import { 
+  AttachedFile, 
+  processFile, 
+  formatFileForMessage, 
+  formatFileSize,
+  getFileIcon 
+} from '@/lib/fileAttachment';
 
 interface EnhancedComposerProps {
   onSend: (text: string) => void;
@@ -44,6 +53,13 @@ interface EnhancedComposerProps {
   hasThread?: boolean; // true if conversation has ≥1 messages
   currentModel?: string;
   onModelChange?: (model: string) => void;
+  depthMode?: DepthMode;
+  onDepthModeChange?: (mode: DepthMode) => void;
+  tokenBudget?: {
+    estimatedInput?: number;
+    maxOutput?: number;
+    used?: number;
+  };
 }
 
 export function EnhancedComposer({ 
@@ -52,11 +68,15 @@ export function EnhancedComposer({
   className, 
   hasThread = false,
   currentModel,
-  onModelChange
+  onModelChange,
+  depthMode = 'Standard',
+  onDepthModeChange,
+  tokenBudget
 }: EnhancedComposerProps) {
   const [text, setText] = React.useState('');
   const [context, setContext] = React.useState('');
-  const [attachedFiles, setAttachedFiles] = React.useState<File[]>([]);
+  const [attachedFiles, setAttachedFiles] = React.useState<AttachedFile[]>([]);
+  const [isProcessingFiles, setIsProcessingFiles] = React.useState(false);
   const [mode, setMode] = React.useState<'Auto' | 'Manual'>(() => {
     // Load mode from localStorage or default to Auto
     if (typeof window !== 'undefined') {
@@ -66,6 +86,7 @@ export function EnhancedComposer({
   });
   const [sources, setSources] = React.useState<'All Sources' | 'Local' | 'Web'>('All Sources');
   const [showContext, setShowContext] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -102,10 +123,18 @@ export function EnhancedComposer({
 
   const handleSend = () => {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed && attachedFiles.length === 0) return;
+    if (disabled) return;
     
-    // Prepend context if provided
-    const fullMessage = context ? `Context: ${context}\n\n${trimmed}` : trimmed;
+    // Format message with attached files
+    let fullMessage = context ? `Context: ${context}\n\n${trimmed}` : trimmed;
+    
+    // Add file contents to message
+    if (attachedFiles.length > 0) {
+      const fileContents = attachedFiles.map(f => formatFileForMessage(f)).join('\n');
+      fullMessage = fullMessage ? `${fullMessage}${fileContents}` : fileContents;
+    }
+    
     onSend(fullMessage);
     
     setText('');
@@ -114,13 +143,26 @@ export function EnhancedComposer({
     textareaRef.current?.focus();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setAttachedFiles(prev => [...prev, ...files]);
+    if (files.length === 0) return;
+    
+    setIsProcessingFiles(true);
+    try {
+      const processedFiles = await Promise.all(files.map(f => processFile(f)));
+      setAttachedFiles(prev => [...prev, ...processedFiles]);
+    } catch (error) {
+      console.error('Error processing files:', error);
+    } finally {
+      setIsProcessingFiles(false);
+    }
+    
+    // Reset input
+    e.target.value = '';
   };
 
-  const removeFile = (index: number) => {
-    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = (id: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id));
   };
 
   const handlePasteClipboard = async () => {
@@ -129,6 +171,52 @@ export function EnhancedComposer({
       setContext(prev => prev ? `${prev}\n${text}` : text);
     } catch (err) {
       console.error('Failed to read clipboard:', err);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Only set isDragging to false if we're actually leaving the element
+    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    setIsProcessingFiles(true);
+    try {
+      const processedFiles = await Promise.all(files.map(f => processFile(f)));
+      setAttachedFiles(prev => [...prev, ...processedFiles]);
+    } catch (error) {
+      console.error('Error processing dropped files:', error);
+    } finally {
+      setIsProcessingFiles(false);
     }
   };
 
@@ -176,21 +264,29 @@ export function EnhancedComposer({
                 {/* Attached files in context panel */}
                 {attachedFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {attachedFiles.map((file, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="bg-primary/10 text-primary border-primary/20 text-xs"
-                      >
-                        {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
-                        <button
-                          onClick={() => removeFile(index)}
-                          className="ml-1 hover:text-primary/80"
+                    {attachedFiles.map((attachedFile) => {
+                      const fileName = attachedFile.file.name;
+                      const displayName = fileName.length > 20 ? fileName.substring(0, 20) + '...' : fileName;
+                      return (
+                        <Badge
+                          key={attachedFile.id}
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-xs flex items-center gap-1 pr-1"
                         >
-                          ×
-                        </button>
-                      </Badge>
-                    ))}
+                          <span>{getFileIcon(attachedFile.type)}</span>
+                          <span>{displayName}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            ({formatFileSize(attachedFile.file.size)})
+                          </span>
+                          <button
+                            onClick={() => removeFile(attachedFile.id)}
+                            className="ml-1 hover:text-primary/80 font-bold text-base leading-none"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -198,12 +294,31 @@ export function EnhancedComposer({
           )}
 
           {/* Main Composer Card */}
-          <Card className={cn(
-            'border shadow-sm rounded-2xl bg-background/95 backdrop-blur-sm transition-all duration-300',
-            // Brighter green border and ring for better visibility
-            'border-primary/60 ring-2 ring-primary/40',
-            'focus-within:ring-primary/60 focus-within:border-primary/80'
-          )}>
+          <Card 
+            className={cn(
+              'border shadow-sm rounded-2xl bg-background/95 backdrop-blur-sm transition-all duration-300 relative',
+              // Brighter green border and ring for better visibility
+              'border-primary/60 ring-2 ring-primary/40',
+              'focus-within:ring-primary/60 focus-within:border-primary/80',
+              // Drag & drop state
+              isDragging && 'ring-4 ring-primary/60 border-primary bg-primary/5'
+            )}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {/* Drag & Drop Overlay */}
+            {isDragging && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm rounded-2xl border-2 border-dashed border-primary">
+                <div className="text-center">
+                  <Paperclip className="h-12 w-12 mx-auto mb-2 text-primary" />
+                  <p className="text-lg font-medium text-primary">Drop files here</p>
+                  <p className="text-sm text-muted-foreground">Images, code, documents</p>
+                </div>
+              </div>
+            )}
+            
             <CardContent className={cn(
               'transition-all duration-300 relative',
               // Compact padding for Claude-like proportions
@@ -240,14 +355,42 @@ export function EnhancedComposer({
                         onClick={() => fileInputRef.current?.click()}
                         className={cn(
                           'h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors',
-                          hasThread ? 'text-sm' : ''
+                          hasThread ? 'text-sm' : '',
+                          attachedFiles.length > 0 && 'text-primary'
                         )}
                       >
                         <Paperclip className="h-4 w-4" />
+                        {attachedFiles.length > 0 && (
+                          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                            {attachedFiles.length}
+                          </span>
+                        )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Attach file</TooltipContent>
+                    <TooltipContent>
+                      {attachedFiles.length > 0 ? `${attachedFiles.length} file(s) attached` : 'Attach file'}
+                    </TooltipContent>
                   </Tooltip>
+
+                  {/* Depth Mode Selector - Always visible */}
+                  {onDepthModeChange && (
+                    <DepthModeSelector 
+                      value={depthMode}
+                      onChange={onDepthModeChange}
+                      disabled={disabled}
+                      compact
+                    />
+                  )}
+
+                  {/* Token Budget Display */}
+                  {tokenBudget && (
+                    <TokenBudgetDisplay
+                      mode={depthMode}
+                      estimatedInput={tokenBudget.estimatedInput}
+                      maxOutput={tokenBudget.maxOutput}
+                      used={tokenBudget.used}
+                    />
+                  )}
 
                   {/* Model selector (compact mode) OR Context button (expanded mode) */}
                   {hasThread ? (
@@ -321,35 +464,64 @@ export function EnhancedComposer({
                 </div>
 
                 {/* Textarea - auto-resizing with max height */}
-                <Textarea
-                  ref={textareaRef}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder={hasThread ? "Message..." : "Ask, search, or make anything..."}
-                  className={cn(
-                    'flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 transition-all duration-200',
-                    'placeholder:text-muted-foreground/75',
-                    // Font sizing
-                    hasThread ? 'text-[15px]' : 'text-base',
-                    // Scrollbar styling
-                    'scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent'
+                <div className="flex-1 flex flex-col gap-2">
+                  {/* Attached files display (compact, when context panel is closed) */}
+                  {attachedFiles.length > 0 && !showContext && (
+                    <div className="flex flex-wrap gap-1.5 px-1">
+                      {attachedFiles.map((attachedFile) => {
+                        const fileName = attachedFile.file.name;
+                        const displayName = fileName.length > 15 ? fileName.substring(0, 15) + '...' : fileName;
+                        return (
+                          <Badge
+                            key={attachedFile.id}
+                            variant="secondary"
+                            className="h-6 text-xs flex items-center gap-1 pr-1 bg-primary/5 hover:bg-primary/10 transition-colors"
+                          >
+                            <span className="text-sm">{getFileIcon(attachedFile.type)}</span>
+                            <span>{displayName}</span>
+                            <button
+                              onClick={() => removeFile(attachedFile.id)}
+                              className="ml-0.5 hover:text-destructive font-bold text-sm leading-none"
+                              aria-label="Remove file"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
                   )}
-                  disabled={disabled}
-                  aria-label="Message"
-                  rows={1}
-                  style={{
-                    resize: 'none',
-                    lineHeight: '1.5',
-                    minHeight: hasThread ? '36px' : '40px',
-                    padding: '8px 0',
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
+                  
+                  <Textarea
+                    ref={textareaRef}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder={hasThread ? "Message..." : "Ask, search, or make anything..."}
+                    className={cn(
+                      'flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 transition-all duration-200',
+                      'placeholder:text-muted-foreground/75',
+                      // Font sizing
+                      hasThread ? 'text-[15px]' : 'text-base',
+                      // Scrollbar styling
+                      'scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent'
+                    )}
+                    disabled={disabled || isProcessingFiles}
+                    aria-label="Message"
+                    rows={1}
+                    style={{
+                      resize: 'none',
+                      lineHeight: '1.5',
+                      minHeight: hasThread ? '36px' : '40px',
+                      padding: '8px 0',
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                  />
+                </div>
 
                 {/* Send button - positioned at top to align with first line */}
                 <div className="flex-shrink-0 pt-1">
@@ -357,23 +529,35 @@ export function EnhancedComposer({
                     <TooltipTrigger asChild>
                       <Button
                         onClick={handleSend}
-                        disabled={disabled || !text.trim()}
+                        disabled={disabled || isProcessingFiles || (!text.trim() && attachedFiles.length === 0)}
                         size="icon"
                         className={cn(
-                          'rounded-full shadow-md transition-all duration-200 flex-shrink-0',
+                          'rounded-full shadow-md transition-all duration-200 flex-shrink-0 relative',
                           'bg-primary hover:bg-primary/90 text-primary-foreground',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
                           // Claude-style circular button sizing
                           hasThread ? 'h-8 w-8' : 'h-9 w-9',
-                          !disabled && text.trim() && 'hover:shadow-lg hover:scale-105 hover:brightness-105'
+                          !disabled && (text.trim() || attachedFiles.length > 0) && 'hover:shadow-lg hover:scale-105 hover:brightness-105'
                         )}
                         aria-label="Send message"
                       >
-                        <Send className={hasThread ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                        {isProcessingFiles ? (
+                          <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send className={hasThread ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                        )}
+                        {attachedFiles.length > 0 && !isProcessingFiles && (
+                          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 text-[9px] text-white flex items-center justify-center font-bold">
+                            {attachedFiles.length}
+                          </span>
+                        )}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {disabled ? 'Please wait...' : 'Send message (Enter)'}
+                      {isProcessingFiles ? 'Processing files...' : 
+                       disabled ? 'Please wait...' : 
+                       attachedFiles.length > 0 ? `Send with ${attachedFiles.length} file(s) (Enter)` :
+                       'Send message (Enter)'}
                     </TooltipContent>
                   </Tooltip>
                 </div>

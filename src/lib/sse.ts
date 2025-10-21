@@ -1,6 +1,21 @@
 import { ChatStreamOptions, StreamEvent } from './types';
+import { DepthMode, ConversationSummary } from './tokenOptimization';
 
-export async function streamChat({ model, messages, mode, onToken, onDone, onError }: ChatStreamOptions) {
+interface EnhancedChatStreamOptions extends ChatStreamOptions {
+  depthMode?: DepthMode;
+  conversationSummary?: ConversationSummary | null;
+}
+
+export async function streamChat({ 
+  model, 
+  messages, 
+  mode, 
+  depthMode = 'Standard',
+  conversationSummary,
+  onToken, 
+  onDone, 
+  onError 
+}: EnhancedChatStreamOptions) {
   try {
     console.log('Connecting to:', `${process.env.NEXT_PUBLIC_API_BASE}/api/chat/stream`);
     console.log('Sending:', { model, messages, mode });
@@ -8,7 +23,13 @@ export async function streamChat({ model, messages, mode, onToken, onDone, onErr
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, mode }),
+      body: JSON.stringify({ 
+        model, 
+        messages, 
+        mode, 
+        depthMode,
+        conversationSummary 
+      }),
     });
 
     console.log('Response status:', res.status);

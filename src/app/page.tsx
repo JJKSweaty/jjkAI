@@ -17,7 +17,7 @@ export default function Page() {
   const { user, loading, signOut } = useAuth();
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const { threads, createThread, deleteThread, updateThread, refreshThreads } = useThreads();
-  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage } = useChat({
+  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage, depthMode, setDepthMode, conversationSummary } = useChat({
     threadId: currentThreadId,
     onMessageSaved: () => refreshThreads(),
   });
@@ -125,6 +125,9 @@ export default function Page() {
               hasThread={false}
               currentModel={model}
               onModelChange={setModel}
+              depthMode={depthMode}
+              onDepthModeChange={setDepthMode}
+              tokenBudget={usage.budget}
             />
           </div>
         </div>
@@ -142,6 +145,9 @@ export default function Page() {
                 hasThread={true}
                 currentModel={model}
                 onModelChange={setModel}
+                depthMode={depthMode}
+                onDepthModeChange={setDepthMode}
+                tokenBudget={usage.budget}
               />
             </div>
           </div>
