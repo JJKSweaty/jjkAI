@@ -22,6 +22,8 @@ export async function registerChatRoutes(app: FastifyInstance) {
         'Access-Control-Allow-Credentials': 'true',
       });
 
+      let streamEnded = false;
+
       try {
         const stream = anthropic.messages.stream({
           model,
@@ -32,25 +34,35 @@ export async function registerChatRoutes(app: FastifyInstance) {
 
         // Handle text deltas
         stream.on('text', (text) => {
-          reply.raw.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+          if (!streamEnded && !reply.raw.writableEnded) {
+            reply.raw.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+          }
         });
 
         // Handle completion
         stream.on('message', (message) => {
           console.log('Message complete:', message.usage);
-        });
-
-        // Handle stream end
-        stream.on('end', () => {
-          reply.raw.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-          reply.raw.end();
+          if (!streamEnded && !reply.raw.writableEnded) {
+            reply.raw.write(`data: ${JSON.stringify({ 
+              type: 'done',
+              usage: {
+                inputTokens: message.usage.input_tokens,
+                outputTokens: message.usage.output_tokens
+              }
+            })}\n\n`);
+            streamEnded = true;
+            reply.raw.end();
+          }
         });
 
         // Handle errors
         stream.on('error', (err) => {
           console.error('Stream error:', err);
-          reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: String(err) })}\n\n`);
-          reply.raw.end();
+          if (!streamEnded && !reply.raw.writableEnded) {
+            reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: String(err) })}\n\n`);
+            streamEnded = true;
+            reply.raw.end();
+          }
         });
 
         // Wait for the stream to complete
@@ -58,8 +70,11 @@ export async function registerChatRoutes(app: FastifyInstance) {
 
       } catch (streamError) {
         console.error('Anthropic API error:', streamError);
-        reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to connect to Claude API' })}\n\n`);
-        reply.raw.end();
+        if (!streamEnded && !reply.raw.writableEnded) {
+          reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to connect to Claude API' })}\n\n`);
+          streamEnded = true;
+          reply.raw.end();
+        }
       }
     } catch (err) {
       console.error('Request error:', err);

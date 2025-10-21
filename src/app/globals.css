@@ -159,7 +159,7 @@ code, pre {
   --card: 120 15% 12%;
   --card-foreground: 120 30% 95%;
   --primary: 120 60% 45%;
-  --primary-foreground: 120 30% 95%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 120 25% 15%;
   --secondary-foreground: 120 30% 95%;
   --muted: 120 20% 15%;
@@ -169,13 +169,13 @@ code, pre {
   --border: 120 20% 20%;
   --input: 120 20% 20%;
   --ring: 120 60% 45%;
-  --sidebar: 120 20% 12%;
-  --sidebar-foreground: 120 30% 95%;
-  --sidebar-primary: 120 60% 45%;
-  --sidebar-primary-foreground: 120 30% 95%;
-  --sidebar-accent: 120 25% 18%;
-  --sidebar-accent-foreground: 120 30% 95%;
-  --sidebar-border: 120 20% 20%;
+  --sidebar: 120 25% 95%;
+  --sidebar-foreground: 120 40% 15%;
+  --sidebar-primary: 120 60% 35%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 120 25% 88%;
+  --sidebar-accent-foreground: 120 40% 15%;
+  --sidebar-border: 120 20% 85%;
 }
 
 .rose {

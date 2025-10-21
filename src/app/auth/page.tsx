@@ -49,8 +49,8 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
-      <Card className="w-full max-w-md">
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
+      <Card className="w-full max-w-md z-10">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Welcome to JJK.AI</CardTitle>
           <CardDescription>

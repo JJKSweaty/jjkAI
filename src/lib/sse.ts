@@ -41,7 +41,7 @@ export async function streamChat({ model, messages, onToken, onDone, onError }: 
             onToken(evt.text);
           }
           if (evt.type === 'done') {
-            onDone();
+            onDone(evt.usage);
           }
           if (evt.type === 'error' && evt.message) {
             onError(evt.message);

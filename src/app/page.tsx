@@ -17,7 +17,7 @@ export default function Page() {
   const { user, loading, signOut } = useAuth();
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const { threads, createThread, deleteThread, updateThread, refreshThreads } = useThreads();
-  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading } = useChat({
+  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage } = useChat({
     threadId: currentThreadId,
     onMessageSaved: () => refreshThreads(),
   });
@@ -111,7 +111,7 @@ export default function Page() {
             />
           </div>
           <div className="flex items-center gap-4">
-            <UsageBadge tokens={0} cost={0} />
+            <UsageBadge tokens={usage.tokens} cost={usage.cost} />
             <ThemeToggle />
           </div>
         </div>

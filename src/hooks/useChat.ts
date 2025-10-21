@@ -76,5 +76,5 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     setMessages([]);
   }
 
-  return { messages, send, streaming, model, setModel, clearMessages, loading };
+  return { messages, send, streaming, model, setModel, clearMessages, loading, usage };
 }
