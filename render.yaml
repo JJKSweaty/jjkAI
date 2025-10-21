@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: jjkai-backend
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: apps/server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
