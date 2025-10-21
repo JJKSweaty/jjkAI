@@ -21,7 +21,21 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
 
   // Always scroll to bottom - no user position tracking
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ block: 'end', behavior });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior, 
+        block: 'end',
+        inline: 'nearest'
+      });
+    }
+    // Also scroll the container to max height to ensure we're at absolute bottom
+    if (scrollContainerRef.current) {
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      }, behavior === 'instant' ? 0 : 100);
+    }
   };
 
   // INSTANT scroll on new message (user sent message)
@@ -86,7 +100,7 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
 
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth">
-      <div className="p-4 space-y-3 pb-6 max-w-4xl mx-auto">
+      <div className="p-4 space-y-3 pb-32 max-w-4xl mx-auto">
         {messages.map((message, index) => {
           const isStreaming = index === messages.length - 1 && message.role === 'assistant' && !message.content;
           
@@ -144,8 +158,8 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
             </div>
           );
         })}
-        {/* Invisible div at the end to scroll to */}
-        <div ref={messagesEndRef} />
+        {/* Invisible spacer at the end to ensure full scroll - extra tall */}
+        <div ref={messagesEndRef} className="h-32" />
       </div>
     </div>
   );

@@ -76,6 +76,30 @@ export function EnhancedComposer({
     }
   }, [mode]);
 
+  // Auto-resize textarea based on content
+  React.useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Calculate new height based on content
+    const newHeight = textarea.scrollHeight;
+    
+    // Set max height (about 8 lines for compact, 10 lines for expanded)
+    const maxHeight = hasThread ? 200 : 280;
+    
+    // Apply the new height, capped at maxHeight
+    if (newHeight <= maxHeight) {
+      textarea.style.height = `${newHeight}px`;
+      textarea.style.overflowY = 'hidden';
+    } else {
+      textarea.style.height = `${maxHeight}px`;
+      textarea.style.overflowY = 'auto';
+    }
+  }, [text, hasThread]);
+
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
@@ -186,17 +210,17 @@ export function EnhancedComposer({
               hasThread ? 'p-0' : 'p-4'
             )}>
 
-              {/* Textarea Container */}
+              {/* Textarea Container - auto-expanding */}
               <div className={cn(
-                'relative flex items-center gap-3 transition-all duration-300',
-                // Claude-style height and padding
+                'relative flex items-start gap-3 transition-all duration-200',
+                // Dynamic height - no max height restriction
                 hasThread 
-                  ? 'min-h-[60px] max-h-[70px] px-4 py-3' 
+                  ? 'min-h-[60px] px-4 py-3' 
                   : 'min-h-[64px] px-5 py-4'
               )}>
                 
-                {/* Left side icons */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Left side icons - aligned to top */}
+                <div className="flex items-start gap-2 flex-shrink-0 pt-1">
                   {/* Hidden file input */}
                   <input
                     ref={fileInputRef}
@@ -296,30 +320,28 @@ export function EnhancedComposer({
                   )}
                 </div>
 
-                {/* Textarea - centered with balanced padding */}
+                {/* Textarea - auto-resizing with max height */}
                 <Textarea
                   ref={textareaRef}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder={hasThread ? "Message..." : "Ask, search, or make anything..."}
                   className={cn(
-                    'flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 transition-all duration-300',
-                    'placeholder:text-muted-foreground/75 scrollbar-thin',
-                    // Claude-style centered text with proper line-height for vertical centering
-                    hasThread 
-                      ? 'text-[15px] py-0' 
-                      : 'text-base py-0',
-                    // Max height for auto-resize
-                    'max-h-[40vh] overflow-y-auto'
+                    'flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 transition-all duration-200',
+                    'placeholder:text-muted-foreground/75',
+                    // Font sizing
+                    hasThread ? 'text-[15px]' : 'text-base',
+                    // Scrollbar styling
+                    'scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent'
                   )}
                   disabled={disabled}
                   aria-label="Message"
                   rows={1}
                   style={{
                     resize: 'none',
-                    scrollbarWidth: 'thin',
-                    lineHeight: hasThread ? '36px' : '40px',
-                    minHeight: hasThread ? '36px' : '40px'
+                    lineHeight: '1.5',
+                    minHeight: hasThread ? '36px' : '40px',
+                    padding: '8px 0',
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -329,8 +351,8 @@ export function EnhancedComposer({
                   }}
                 />
 
-                {/* Send button - aligned with text baseline */}
-                <div className="flex-shrink-0">
+                {/* Send button - positioned at top to align with first line */}
+                <div className="flex-shrink-0 pt-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
