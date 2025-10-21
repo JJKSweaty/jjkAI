@@ -58,7 +58,7 @@ export function DepthModeSelector({ value, onChange, disabled, compact = false }
           variant="ghost" 
           size="sm"
           disabled={disabled}
-          className="h-7 gap-1.5 px-2 text-xs font-normal hover:bg-accent"
+          className="h-8 gap-1.5 px-2 text-xs font-normal hover:bg-accent items-center"
         >
           <Icon className={`h-3.5 w-3.5 ${currentConfig.color}`} />
           <span className="text-muted-foreground">{currentConfig.label}</span>
@@ -105,11 +105,11 @@ export function TokenBudgetDisplay({ mode, estimatedInput, maxOutput, used }: To
   const isNearLimit = percentage > 80;
   
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="flex items-center h-8 gap-1.5 text-xs text-muted-foreground">
       {maxOutput && (
         <Badge 
           variant="outline" 
-          className={`h-5 px-1.5 text-xs font-normal ${
+          className={`h-6 px-1.5 text-xs font-normal flex items-center ${
             isNearLimit ? 'border-orange-500 text-orange-600 dark:text-orange-400' : ''
           }`}
         >

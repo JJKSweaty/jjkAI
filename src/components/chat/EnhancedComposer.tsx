@@ -102,20 +102,28 @@ export function EnhancedComposer({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to auto to get the correct scrollHeight
+    // Reset height to recalculate
     textarea.style.height = 'auto';
     
-    // Calculate new height based on content
-    const newHeight = textarea.scrollHeight;
+    // Calculate minimum and maximum heights based on mode
+    // Line height is 1.5, font sizes: 15px (hasThread) or 16px (new chat)
+    const minHeight = hasThread ? 36 : 40; // About 1.5 lines with padding
+    const maxHeight = hasThread ? 196 : 208; // Exactly 8 lines with padding
     
-    // Set max height (about 8 lines for compact, 10 lines for expanded)
-    const maxHeight = hasThread ? 200 : 280;
+    // Get the actual content height
+    const contentHeight = textarea.scrollHeight;
     
-    // Apply the new height, capped at maxHeight
-    if (newHeight <= maxHeight) {
-      textarea.style.height = `${newHeight}px`;
+    // Apply height with smooth transition
+    if (contentHeight <= minHeight) {
+      // Single line or less
+      textarea.style.height = `${minHeight}px`;
+      textarea.style.overflowY = 'hidden';
+    } else if (contentHeight <= maxHeight) {
+      // Growing from 1 to 8 lines
+      textarea.style.height = `${contentHeight}px`;
       textarea.style.overflowY = 'hidden';
     } else {
+      // Max height reached, enable scrolling
       textarea.style.height = `${maxHeight}px`;
       textarea.style.overflowY = 'auto';
     }
@@ -498,12 +506,13 @@ export function EnhancedComposer({
                     onChange={(e) => setText(e.target.value)}
                     placeholder={hasThread ? "Message..." : "Ask, search, or make anything..."}
                     className={cn(
-                      'flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 transition-all duration-200',
+                      'resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0',
                       'placeholder:text-muted-foreground/75',
+                      'transition-all duration-150 ease-out',
                       // Font sizing
                       hasThread ? 'text-[15px]' : 'text-base',
-                      // Scrollbar styling
-                      'scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent'
+                      // Scrollbar styling - sleek and modern
+                      'scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent'
                     )}
                     disabled={disabled || isProcessingFiles}
                     aria-label="Message"
@@ -511,8 +520,8 @@ export function EnhancedComposer({
                     style={{
                       resize: 'none',
                       lineHeight: '1.5',
-                      minHeight: hasThread ? '36px' : '40px',
                       padding: '8px 0',
+                      minHeight: hasThread ? '36px' : '40px',
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
