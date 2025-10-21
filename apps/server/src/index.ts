@@ -11,7 +11,21 @@ const app = Fastify({
 
 // Enable CORS for your frontend
 await app.register(cors, {
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: (origin, cb) => {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      /^https:\/\/.*\.vercel\.app$/,  // Allow all Vercel deployments
+    ];
+    
+    if (!origin || allowedOrigins.some(allowed => 
+      typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+    )) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed by CORS'), false);
+    }
+  },
   methods: ['POST', 'GET', 'OPTIONS'],
   credentials: true,
 });
