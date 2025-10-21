@@ -120,6 +120,16 @@ code, pre {
   @apply text-foreground font-semibold;
 }
 
+/* Add spacing before code blocks */
+.prose pre {
+  @apply mt-6 mb-4;
+}
+
+/* Add spacing after paragraphs before code */
+.prose p + pre {
+  @apply mt-6;
+}
+
 .prose code {
   @apply bg-muted px-1.5 py-0.5 rounded text-sm;
 }
@@ -142,4 +152,53 @@ code, pre {
 
 .prose li {
   @apply my-1;
+}
+.forest {
+  --background: 120 20% 10%;
+  --foreground: 120 30% 95%;
+  --card: 120 15% 12%;
+  --card-foreground: 120 30% 95%;
+  --primary: 120 60% 45%;
+  --primary-foreground: 120 30% 95%;
+  --secondary: 120 25% 15%;
+  --secondary-foreground: 120 30% 95%;
+  --muted: 120 20% 15%;
+  --muted-foreground: 120 20% 60%;
+  --accent: 120 25% 20%;
+  --accent-foreground: 120 30% 95%;
+  --border: 120 20% 20%;
+  --input: 120 20% 20%;
+  --ring: 120 60% 45%;
+  --sidebar: 120 20% 12%;
+  --sidebar-foreground: 120 30% 95%;
+  --sidebar-primary: 120 60% 45%;
+  --sidebar-primary-foreground: 120 30% 95%;
+  --sidebar-accent: 120 25% 18%;
+  --sidebar-accent-foreground: 120 30% 95%;
+  --sidebar-border: 120 20% 20%;
+}
+
+.rose {
+  --background: 350 25% 95%;
+  --foreground: 340 15% 10%;
+  --card: 350 20% 98%;
+  --card-foreground: 340 15% 10%;
+  --primary: 350 70% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 350 20% 85%;
+  --secondary-foreground: 340 15% 10%;
+  --muted: 350 15% 90%;
+  --muted-foreground: 340 10% 40%;
+  --accent: 350 20% 85%;
+  --accent-foreground: 340 15% 10%;
+  --border: 350 15% 85%;
+  --input: 350 15% 85%;
+  --ring: 350 70% 50%;
+  --sidebar: 350 25% 98%;
+  --sidebar-foreground: 340 15% 10%;
+  --sidebar-primary: 350 70% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 350 20% 92%;
+  --sidebar-accent-foreground: 340 15% 10%;
+  --sidebar-border: 350 15% 88%;
 }

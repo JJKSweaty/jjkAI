@@ -32,11 +32,16 @@ import {
   Archive,
   LogOut,
   Folder,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useThreads } from '@/hooks/useThreads';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 const primary = [
   { title: 'Home', icon: Home, href: '/' },
@@ -51,7 +56,9 @@ interface AppSidebarProps {
 export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSidebarProps = {}) {
   const { user, signOut } = useAuth();
   const router = useRouter();
-  const { threads, loading: threadsLoading, deleteThread } = useThreads();
+  const { threads, loading: threadsLoading, deleteThread, updateThread } = useThreads();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
 
   const handleNewChat = () => {
     if (onNewChat) {
@@ -74,6 +81,25 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
     if (confirm('Delete this chat?')) {
       await deleteThread(threadId);
     }
+  };
+
+  const startEditing = (e: React.MouseEvent, threadId: string, currentTitle: string) => {
+    e.stopPropagation();
+    setEditingId(threadId);
+    setEditTitle(currentTitle || 'New Chat');
+  };
+
+  const saveEdit = async (e: React.MouseEvent, threadId: string) => {
+    e.stopPropagation();
+    if (editTitle.trim()) {
+      await updateThread(threadId, { title: editTitle.trim() });
+    }
+    setEditingId(null);
+  };
+
+  const cancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(null);
   };
 
   return (
@@ -143,22 +169,62 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
               ) : (
                 threads.slice(0, 10).map((thread) => (
                   <SidebarMenuItem key={thread.id}>
-                    <div className="group flex items-center gap-1">
-                      <SidebarMenuButton 
-                        onClick={() => handleThreadClick(thread.id)}
-                        isActive={currentThreadId === thread.id}
-                        className="flex-1"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        <span className="truncate">{thread.title || 'New Chat'}</span>
-                      </SidebarMenuButton>
-                      <button
-                        onClick={(e) => handleDeleteThread(e, thread.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
-                        title="Delete chat"
-                      >
-                        <LogOut className="h-3 w-3 text-destructive" />
-                      </button>
+                    <div className="group flex items-center gap-1 w-full">
+                      {editingId === thread.id ? (
+                        /* Editing mode */
+                        <div className="flex items-center gap-1 flex-1 px-2">
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEdit(e as any, thread.id);
+                              if (e.key === 'Escape') cancelEdit(e as any);
+                            }}
+                          />
+                          <button
+                            onClick={(e) => saveEdit(e, thread.id)}
+                            className="p-1 hover:bg-primary/10 rounded"
+                            title="Save"
+                          >
+                            <Check className="h-3 w-3 text-primary" />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-1 hover:bg-destructive/10 rounded"
+                            title="Cancel"
+                          >
+                            <X className="h-3 w-3 text-destructive" />
+                          </button>
+                        </div>
+                      ) : (
+                        /* Normal mode */
+                        <>
+                          <SidebarMenuButton 
+                            onClick={() => handleThreadClick(thread.id)}
+                            isActive={currentThreadId === thread.id}
+                            className="flex-1"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            <span className="truncate">{thread.title || 'New Chat'}</span>
+                          </SidebarMenuButton>
+                          <button
+                            onClick={(e) => startEditing(e, thread.id, thread.title || 'New Chat')}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-opacity"
+                            title="Edit name"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteThread(e, thread.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
+                            title="Delete chat"
+                          >
+                            <LogOut className="h-3 w-3 text-destructive" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </SidebarMenuItem>
                 ))

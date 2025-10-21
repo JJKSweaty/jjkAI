@@ -10,6 +10,7 @@ import { UsageBadge } from '@/components/chat/UsageBadge';
 import { useRouter } from 'next/navigation';
 import { SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 
 export default function Page() {
@@ -51,15 +52,14 @@ export default function Page() {
         // Auto-generate title from first message (first 50 chars)
         const title = text.length > 50 ? text.substring(0, 50) + '...' : text;
         await updateThread(thread.id, { title });
-        
-        // Refresh sidebar to show new chat immediately
-        refreshThreads();
       }
     }
     
     // Send with the threadId (either existing or newly created)
     if (threadId) {
       await send(text, threadId);
+      // Refresh sidebar after message is sent to show updated chat
+      await refreshThreads();
     }
   };
 
@@ -112,33 +112,32 @@ export default function Page() {
           </div>
           <div className="flex items-center gap-4">
             <UsageBadge tokens={0} cost={0} />
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        {messages.length === 0 ? (
-          /* Centered composer when empty */
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-full max-w-4xl">
+      {messages.length === 0 ? (
+        /* Centered composer when empty */
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-4xl px-4">
+            <EnhancedComposer onSend={handleSend} disabled={streaming} />
+          </div>
+        </div>
+      ) : (
+        /* Messages with separate scroller and sticky composer */
+        <div className="flex-1 flex flex-col">
+          <MessageList messages={messages} streaming={streaming} threadId={currentThreadId} />
+          
+          {/* Composer - sticky bar outside scroller */}
+          <div className="sticky bottom-0 z-20 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="mx-auto max-w-4xl px-4 py-3">
               <EnhancedComposer onSend={handleSend} disabled={streaming} />
             </div>
           </div>
-        ) : (
-          /* Messages with fixed composer at bottom */
-          <>
-            <div className="flex-1 overflow-hidden">
-              <MessageList messages={messages} />
-            </div>
-            <div className="w-full flex justify-center border-t bg-background">
-              <div className="w-full max-w-4xl">
-                <EnhancedComposer onSend={handleSend} disabled={streaming} />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
       </SidebarInset>
     </>
   );

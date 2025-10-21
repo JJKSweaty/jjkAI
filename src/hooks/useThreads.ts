@@ -15,16 +15,20 @@ export function useThreads() {
       return;
     }
 
+    console.log('useThreads: Fetching threads for user:', user.id);
     fetchThreads();
   }, [user]);
 
   const fetchThreads = async () => {
+    console.log('fetchThreads: Starting fetch...');
     try {
       const { data, error } = await supabase
         .from('threads')
         .select('*')
         .order('updated_at', { ascending: false });
 
+      console.log('fetchThreads: Result:', { data, error, count: data?.length });
+      
       if (error) throw error;
       setThreads(data || []);
     } catch (error) {
@@ -35,8 +39,13 @@ export function useThreads() {
   };
 
   const createThread = async (model: string, title?: string) => {
-    if (!user) return null;
+    if (!user) {
+      console.error('createThread: No user found');
+      return null;
+    }
 
+    console.log('createThread: Creating thread with:', { model, title, userId: user.id });
+    
     try {
       const { data, error } = await supabase
         .from('threads')
@@ -48,9 +57,12 @@ export function useThreads() {
         .select()
         .single();
 
+      console.log('createThread: Result:', { data, error });
+
       if (error) throw error;
       
       setThreads([data, ...threads]);
+      console.log('createThread: Thread added to state, total threads:', threads.length + 1);
       return data;
     } catch (error) {
       console.error('Error creating thread:', error);

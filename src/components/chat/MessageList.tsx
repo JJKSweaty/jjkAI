@@ -9,24 +9,56 @@ import { cn } from '@/lib/utils';
 
 interface MessageListProps {
   messages: Message[];
+  streaming?: boolean;
+  threadId?: string | null;
 }
 
-export function MessageList({ messages }: MessageListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+export function MessageList({ messages, streaming, threadId }: MessageListProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const userNearBottomRef = useRef(true);
 
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    messagesEndRef.current?.scrollIntoView({ block: 'end', behavior });
+  };
+
+  // Track if user is near the bottom
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
+      userNearBottomRef.current = distance < 120; // px threshold
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // On new messages or streaming: autoscroll if user is near bottom
+  // Debounce to avoid laggy scroll on every character
+  useEffect(() => {
+    if (!userNearBottomRef.current) return;
+    
+    const timeoutId = setTimeout(() => {
+      scrollToBottom(streaming ? 'smooth' : 'auto');
+    }, 100); // Debounce by 100ms
+    
+    return () => clearTimeout(timeoutId);
+  }, [messages, streaming]);
+
+  // On thread change: force scroll to bottom
+  useEffect(() => {
+    const id = requestAnimationFrame(() => scrollToBottom('smooth'));
+    return () => cancelAnimationFrame(id);
+  }, [threadId]);
 
   if (messages.length === 0) {
     return null;
   }
 
   return (
-    <ScrollArea className="flex-1">
-      <div ref={scrollRef} className="p-4 space-y-3 pb-64 max-w-4xl mx-auto">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth">
+      <div className="p-4 space-y-3 pb-6 max-w-4xl mx-auto">
         {messages.map((message, index) => {
           const isStreaming = index === messages.length - 1 && message.role === 'assistant' && !message.content;
           
@@ -84,7 +116,9 @@ export function MessageList({ messages }: MessageListProps) {
             </div>
           );
         })}
+        {/* Invisible div at the end to scroll to */}
+        <div ref={messagesEndRef} />
       </div>
-    </ScrollArea>
+    </div>
   );
 }

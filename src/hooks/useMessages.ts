@@ -68,6 +68,31 @@ export function useMessages(threadId: string | null) {
     }
 
     try {
+      // Check authentication first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('Not authenticated - cannot save messages');
+        return;
+      }
+
+      console.log('Authenticated user:', user.id);
+
+      // Ensure thread exists and belongs to current user using RPC
+      console.log('Claiming/creating thread:', activeThreadId);
+      const { data: claimedId, error: claimError } = await supabase.rpc('create_or_claim_thread', {
+        p_id: activeThreadId,
+        p_title: 'New chat',
+        p_model: 'claude-3-5-haiku-latest',
+      });
+
+      if (claimError) {
+        console.error('Failed to claim thread:', claimError);
+        throw claimError;
+      }
+
+      console.log('Thread claimed:', claimedId);
+
+      // Now insert messages
       const messagesToInsert = newMessages.map((m: Message) => ({
         thread_id: activeThreadId,
         role: m.role,
@@ -82,13 +107,13 @@ export function useMessages(threadId: string | null) {
         .select();
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Supabase insert error:', error);
         throw error;
       }
       
-      console.log('Messages saved successfully:', data);
+      console.log('✅ Messages saved successfully:', data);
     } catch (error) {
-      console.error('Error saving messages:', error);
+      console.error('❌ Error saving messages:', error);
     }
   };
 

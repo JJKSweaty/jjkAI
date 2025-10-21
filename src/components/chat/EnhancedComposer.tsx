@@ -31,11 +31,8 @@ import {
   Sparkles,
   ChevronDown,
   PlusCircle,
-  Moon,
-  Sun,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
 
 interface EnhancedComposerProps {
   onSend: (text: string) => void;
@@ -50,7 +47,6 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
   const [mode, setMode] = React.useState<'Auto' | 'Manual'>('Auto');
   const [sources, setSources] = React.useState<'All Sources' | 'Local' | 'Web'>('All Sources');
   const [showContext, setShowContext] = React.useState(false);
-  const { theme, setTheme } = useTheme();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -92,10 +88,10 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
         <div className="w-full p-4 flex gap-4">
           {/* Context Panel (Expandable) */}
           {showContext && (
-            <Card className="w-64 border-red-500/20 ring-1 ring-red-500/10 rounded-2xl bg-background/95 backdrop-blur">
+            <Card className="w-64 border-primary/20 ring-1 ring-primary/10 rounded-2xl bg-background/95 backdrop-blur">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-red-600 dark:text-red-400">Context</span>
+                  <span className="text-sm font-medium text-primary">Context</span>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -109,7 +105,7 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="Add context here..."
-                  className="min-h-[120px] text-sm resize-none border-red-500/20 focus-visible:ring-red-500"
+                  className="min-h-[120px] text-sm resize-none border-primary/20 focus-visible:ring-primary"
                 />
                 
                 {/* Attached files in context panel */}
@@ -119,12 +115,12 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                       <Badge
                         key={index}
                         variant="secondary"
-                        className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 text-xs"
+                        className="bg-primary/10 text-primary border-primary/20 text-xs"
                       >
                         {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
                         <button
                           onClick={() => removeFile(index)}
-                          className="ml-1 hover:text-red-700 dark:hover:text-red-300"
+                          className="ml-1 hover:text-primary/80"
                         >
                           ×
                         </button>
@@ -137,7 +133,7 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
           )}
 
           {/* Main Composer Card */}
-          <Card className="flex-1 border-red-500/20 ring-1 ring-red-500/10 shadow-lg shadow-red-500/5 rounded-2xl bg-background/95 backdrop-blur">
+          <Card className="flex-1 border-primary/20 ring-1 ring-primary/10 shadow-lg shadow-primary/5 rounded-2xl bg-background/95 backdrop-blur">
             <CardContent className="p-4">
 
               {/* Textarea */}
@@ -147,7 +143,7 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Ask, search, or make anything..."
-                  className="min-h-[80px] text-sm resize-y border-muted-foreground/20 focus-visible:ring-red-500 focus-visible:border-red-500 rounded-xl"
+                  className="min-h-[80px] text-sm resize-y border-muted-foreground/20 focus-visible:ring-primary focus-visible:border-primary rounded-xl"
                   disabled={disabled}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -176,7 +172,7 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                       variant="ghost" 
                       size="icon"
                       onClick={() => fileInputRef.current?.click()}
-                      className="hover:bg-red-500/10 hover:text-red-600"
+                      className="hover:bg-primary/10 hover:text-primary"
                     >
                       <Paperclip className="h-4 w-4" />
                     </Button>
@@ -191,8 +187,8 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                       size="icon"
                       onClick={() => setShowContext(!showContext)}
                       className={cn(
-                        "hover:bg-red-500/10 hover:text-red-600",
-                        showContext && "bg-red-500/10 text-red-600"
+                        "hover:bg-primary/10 hover:text-primary",
+                        showContext && "bg-primary/10 text-primary"
                       )}
                     >
                       <PlusCircle className="h-4 w-4" />
@@ -209,7 +205,7 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="gap-2 hover:bg-red-500/10 hover:text-red-600"
+                      className="gap-2 hover:bg-primary/10 hover:text-primary"
                     >
                       <Sparkles className="h-4 w-4" />
                       {mode}
@@ -233,7 +229,7 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="gap-2 hover:bg-red-500/10 hover:text-red-600"
+                      className="gap-2 hover:bg-primary/10 hover:text-primary"
                     >
                       <Globe className="h-4 w-4" />
                       {sources}
@@ -256,18 +252,6 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
 
                 <div className="ml-auto" />
 
-                {/* Theme toggle */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="h-8 w-8"
-                >
-                  <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  <span className="sr-only">Toggle theme</span>
-                </Button>
-
                 {/* Send button */}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -277,10 +261,10 @@ export function EnhancedComposer({ onSend, disabled, className }: EnhancedCompos
                       size="icon"
                       className={cn(
                         'h-10 w-10 rounded-full shadow-lg',
-                        'bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700',
-                        'text-white transition-all',
+                        'bg-primary hover:bg-primary/90 text-primary-foreground',
+                        'transition-all',
                         'disabled:opacity-50 disabled:cursor-not-allowed',
-                        !disabled && text.trim() && 'shadow-red-500/50 hover:shadow-red-500/70'
+                        !disabled && text.trim() && 'shadow-primary/50 hover:shadow-primary/70'
                       )}
                       aria-label="Send message"
                     >
