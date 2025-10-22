@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
 import { registerChatRoutes } from './routes/chat.js';
+import { registerTokenRoutes } from './routes/tokens.js';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ await app.register(cors, {
 
 // Register routes
 registerChatRoutes(app);
+registerTokenRoutes(app);
 
 const port = Number(process.env.PORT || 8080);
 const host = '0.0.0.0';

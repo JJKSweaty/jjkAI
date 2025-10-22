@@ -3,6 +3,7 @@ import { anthropic } from '../lib/anthropic.js';
 import { ChatRequest } from '../utils/types.js';
 import { promptCache } from '../utils/promptCache.js';
 import { autoContinuation } from '../utils/autoContinuation.js';
+import { logUsage } from '../utils/usageLogger.js';
 
 // Claude model pricing and capabilities
 const CLAUDE_MODELS = {
@@ -314,6 +315,24 @@ export async function registerChatRoutes(app: FastifyInstance) {
           const capUtilization = Math.round((outputTokens / maxTokens) * 100);
           
           console.log(`✅ Complete: ${finalModel} | ${taskClass} | In: ${inputTokens} | Out: ${outputTokens} | Cost: $${estimatedCost.toFixed(6)} | Cap: ${capUtilization}% | Reduction: ${tokenReduction}%`);
+          
+          // Log usage to database for analytics
+          const requestStartTime = Date.now();
+          logUsage({
+            user_id: body.threadId || 'anonymous',
+            user_display: body.threadId || 'Anonymous User',
+            thread_id: body.threadId,
+            session_id: body.threadId,
+            model: finalModel,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            reasoning_tokens: 0,
+            latency_ms: requestStartTime ? Date.now() - requestStartTime : undefined,
+            status: 'ok',
+            finish_reason: finishReason,
+            depth_mode: body.depthMode,
+            task_class: taskClass,
+          }).catch(err => console.error('Usage logging failed:', err));
           
           // Flag low cap utilization (might be over-provisioned)
           if (capUtilization < 30) {
