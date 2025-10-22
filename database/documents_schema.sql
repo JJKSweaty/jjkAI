@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
   page_end INTEGER,
   section_path TEXT,
   block_ids JSONB,  -- Array of block IDs included in this chunk
-  embedding vector(1536),  -- OpenAI ada-002 or similar (1536 dimensions)
+  embedding vector(384),  -- Local model (all-MiniLM-L6-v2, 384 dimensions)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

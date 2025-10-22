@@ -17,6 +17,7 @@ interface ChatWithDocsRequest {
   docIds?: string[]; // Optional: filter by specific documents
   model?: string;
   maxResults?: number; // Max chunks to retrieve
+  searchMode?: "keyword" | "vector" | "hybrid"; // Search mode (default: hybrid if embeddings available)
 }
 
 /**
@@ -39,17 +40,19 @@ export async function ragChatRoutes(fastify: FastifyInstance) {
           docIds,
           model = "claude-3-7-sonnet-20250219",
           maxResults = 8,
+          searchMode = "hybrid", // Default to hybrid (local embeddings)
         } = request.body;
 
         if (!query) {
           return reply.code(400).send({ error: "Query is required" });
         }
 
-        // Step 1: Search documents
+        // Step 1: Search documents with chosen mode
         const searchResults = await searchChunks({
           query,
           docIds,
           limit: maxResults,
+          mode: searchMode,
         });
 
         if (searchResults.length === 0) {

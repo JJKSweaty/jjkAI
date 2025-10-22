@@ -68,9 +68,24 @@ export async function documentRoutes(fastify: FastifyInstance) {
         return reply.code(500).send({ error: "Failed to store document" });
       }
 
-      // Store chunks for retrieval
+      // Store chunks for retrieval with embeddings
       if (result.chunks.length > 0) {
-        const chunkInserts = result.chunks.map((chunk) => ({
+        // Generate embeddings for all chunks (local model, no API key needed)
+        const { generateEmbeddingBatch } = await import("../lib/embeddings");
+        let embeddings: number[][] = [];
+        
+        try {
+          const embeddingResults = await generateEmbeddingBatch(
+            result.chunks.map((c) => c.text)
+          );
+          embeddings = embeddingResults.map((r) => r.embedding);
+          console.log(`Generated ${embeddings.length} embeddings (local model)`);
+        } catch (embError) {
+          console.warn("Failed to generate embeddings:", embError);
+          // Continue without embeddings - keyword search will still work
+        }
+
+        const chunkInserts = result.chunks.map((chunk, index) => ({
           chunk_id: chunk.id,
           doc_id: result.doc.docId,
           text: chunk.text,
@@ -78,7 +93,7 @@ export async function documentRoutes(fastify: FastifyInstance) {
           page_end: chunk.meta.pageEnd,
           section_path: chunk.meta.sectionPath,
           block_ids: chunk.meta.blockIds,
-          // embedding: chunk.embedding, // TODO: Generate embeddings
+          embedding: embeddings[index] ? JSON.stringify(embeddings[index]) : null,
         }));
 
         const { error: chunksError } = await supabase

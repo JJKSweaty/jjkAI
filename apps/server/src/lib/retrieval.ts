@@ -1,26 +1,32 @@
 /**
  * Document Retrieval - Full-text search with ranking
- * Uses PostgreSQL FTS (to_tsvector, ts_rank) for BM25-style keyword search
+ * Supports keyword, vector, and hybrid search
  */
 
 import { supabase } from "./supabase";
 import type { DocumentChunk, CitationSource } from "../types/documents";
+import { generateQueryEmbedding } from "./embeddings";
 
 export interface SearchOptions {
   query: string;
   docIds?: string[]; // Filter by specific documents
   limit?: number; // Max results (default: 10)
   minScore?: number; // Minimum relevance score (0-1)
+  mode?: "keyword" | "vector" | "hybrid"; // Search mode (default: keyword)
+  keywordWeight?: number; // Weight for keyword score in hybrid (default: 0.3)
+  vectorWeight?: number; // Weight for vector score in hybrid (default: 0.7)
 }
 
 export interface SearchResult {
   chunk: DocumentChunk;
   score: number; // Relevance score (0-1)
   rank: number; // Result position (1-indexed)
+  keywordScore?: number; // Keyword score (hybrid mode only)
+  vectorScore?: number; // Vector score (hybrid mode only)
 }
 
 /**
- * Search document chunks using full-text search
+ * Search document chunks using full-text search, vector search, or hybrid
  * Returns ranked results with relevance scores
  */
 export async function searchChunks(
@@ -30,48 +36,124 @@ export async function searchChunks(
     throw new Error("Database not configured");
   }
 
-  const { query, docIds, limit = 10, minScore = 0.01 } = options;
+  const {
+    query,
+    docIds,
+    limit = 10,
+    minScore = 0.01,
+    mode = "keyword",
+    keywordWeight = 0.3,
+    vectorWeight = 0.7,
+  } = options;
 
-  // Call PostgreSQL function with all parameters
-  // Uses ts_rank for relevance scoring
-  const params: any = {
-    search_query: query,
-    max_results: limit,
-    min_score: minScore,
-  };
-  
-  // Only add filter_doc_ids if provided
-  if (docIds && docIds.length > 0) {
-    params.filter_doc_ids = docIds;
+  // Keyword search (default)
+  if (mode === "keyword") {
+    const params: any = {
+      search_query: query,
+      max_results: limit,
+      min_score: minScore,
+    };
+
+    if (docIds && docIds.length > 0) {
+      params.filter_doc_ids = docIds;
+    }
+
+    const { data, error } = await supabase.rpc("search_chunks", params);
+
+    if (error) {
+      console.error("Keyword search error:", error);
+      throw new Error(`Search failed: ${error.message}`);
+    }
+
+    return (data || []).map((row: any, index: number) => ({
+      chunk: mapRowToChunk(row),
+      score: row.score || 0,
+      rank: index + 1,
+    }));
   }
 
-  const { data, error } = await supabase.rpc("search_chunks", params);
+  // Vector search
+  if (mode === "vector") {
+    const embedding = await generateQueryEmbedding(query);
 
-  if (error) {
-    console.error("Search error:", error);
-    throw new Error(`Search failed: ${error.message}`);
+    const params: any = {
+      query_embedding: JSON.stringify(embedding),
+      max_results: limit,
+      min_similarity: minScore,
+    };
+
+    if (docIds && docIds.length > 0) {
+      params.filter_doc_ids = docIds;
+    }
+
+    const { data, error } = await supabase.rpc("search_chunks_vector", params);
+
+    if (error) {
+      console.error("Vector search error:", error);
+      throw new Error(`Vector search failed: ${error.message}`);
+    }
+
+    return (data || []).map((row: any, index: number) => ({
+      chunk: mapRowToChunk(row),
+      score: row.similarity || 0,
+      rank: index + 1,
+    }));
   }
 
-  // Map results to SearchResult format
-  return (data || []).map((row: any, index: number) => ({
-    chunk: {
-      id: row.chunk_id,
-      docId: row.doc_id,
-      text: row.text,
-      meta: {
-        title: row.title,
-        sourceFilename: row.filename,
-        mime: row.mime_type,
-        pageStart: row.page_start,
-        pageEnd: row.page_end,
-        sectionPath: row.section_path,
-        blockIds: row.block_ids || [],
-        hash: row.hash,
-      },
+  // Hybrid search (keyword + vector)
+  if (mode === "hybrid") {
+    const embedding = await generateQueryEmbedding(query);
+
+    const params: any = {
+      search_query: query,
+      query_embedding: JSON.stringify(embedding),
+      max_results: limit,
+      keyword_weight: keywordWeight,
+      vector_weight: vectorWeight,
+    };
+
+    if (docIds && docIds.length > 0) {
+      params.filter_doc_ids = docIds;
+    }
+
+    const { data, error } = await supabase.rpc("search_chunks_hybrid", params);
+
+    if (error) {
+      console.error("Hybrid search error:", error);
+      throw new Error(`Hybrid search failed: ${error.message}`);
+    }
+
+    return (data || []).map((row: any, index: number) => ({
+      chunk: mapRowToChunk(row),
+      score: row.score || 0,
+      keywordScore: row.keyword_score,
+      vectorScore: row.vector_score,
+      rank: index + 1,
+    }));
+  }
+
+  throw new Error(`Invalid search mode: ${mode}`);
+}
+
+/**
+ * Helper: Map database row to DocumentChunk
+ */
+function mapRowToChunk(row: any): DocumentChunk {
+  return {
+    id: row.chunk_id,
+    docId: row.doc_id,
+    text: row.text,
+    meta: {
+      title: row.title,
+      sourceFilename: row.filename,
+      mime: row.mime_type,
+      pageStart: row.page_start,
+      pageEnd: row.page_end,
+      sectionPath: row.section_path,
+      blockIds: row.block_ids || [],
+      hash: row.hash,
     },
-    score: row.score || 0,
-    rank: index + 1,
-  }));
+  };
 }
 
 /**
