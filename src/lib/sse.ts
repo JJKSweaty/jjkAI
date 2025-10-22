@@ -7,6 +7,7 @@ interface EnhancedChatStreamOptions extends ChatStreamOptions {
   userId?: string;
   userEmail?: string;
   threadId?: string;
+  signal?: AbortSignal;
   onContinuationPrompt?: (data: { message: string; cost: number; continuationCount: number }) => void;
 }
 
@@ -19,6 +20,7 @@ export async function streamChat({
   userId,
   userEmail,
   threadId,
+  signal,
   onToken, 
   onDone, 
   onError,
@@ -41,6 +43,7 @@ export async function streamChat({
         userEmail,
         threadId
       }),
+      signal, // Add abort signal support
     });
 
     console.log('Response status:', res.status);
@@ -91,6 +94,12 @@ export async function streamChat({
       }
     }
   } catch (error) {
+    // Check if error is due to abort
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('Stream aborted by user');
+      onError('Generation stopped');
+      return;
+    }
     onError(error instanceof Error ? error.message : 'Unknown error occurred');
   }
 }

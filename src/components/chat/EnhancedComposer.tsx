@@ -27,6 +27,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Paperclip,
   Send,
+  Square,
   Globe,
   Sparkles,
   ChevronDown,
@@ -64,6 +65,8 @@ interface EnhancedComposerProps {
   };
   threadId?: string | null; // Current thread ID for PDF uploads
   onPdfUploaded?: (documentId: string) => void; // Callback when PDF is uploaded
+  onStop?: () => void; // Callback to stop generation
+  isGenerating?: boolean; // Whether AI is currently generating a response
 }
 
 export function EnhancedComposer({ 
@@ -79,7 +82,9 @@ export function EnhancedComposer({
   onDepthModeChange,
   tokenBudget,
   threadId,
-  onPdfUploaded
+  onPdfUploaded,
+  onStop,
+  isGenerating = false
 }: EnhancedComposerProps) {
   const [text, setText] = React.useState('');
   const [context, setContext] = React.useState('');
@@ -557,30 +562,34 @@ export function EnhancedComposer({
                   />
                 </div>
 
-                {/* Send button - positioned at top to align with first line */}
+                {/* Send/Stop button - positioned at top to align with first line */}
                 <div className="flex-shrink-0 pt-0.5 sm:pt-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        onClick={handleSend}
-                        disabled={disabled || isProcessingFiles || (!text.trim() && attachedFiles.length === 0)}
+                        onClick={isGenerating ? onStop : handleSend}
+                        disabled={isGenerating ? false : (disabled || isProcessingFiles || (!text.trim() && attachedFiles.length === 0))}
                         size="icon"
                         className={cn(
                           'rounded-full shadow-md transition-all duration-200 flex-shrink-0 relative',
-                          'bg-primary hover:bg-primary/90 text-primary-foreground',
+                          isGenerating 
+                            ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                            : 'bg-primary hover:bg-primary/90 text-primary-foreground',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
                           // Claude-style circular button sizing - smaller on mobile
                           hasThread ? 'h-7 w-7 sm:h-8 sm:w-8' : 'h-8 w-8 sm:h-9 sm:w-9',
-                          !disabled && (text.trim() || attachedFiles.length > 0) && 'hover:shadow-lg hover:scale-105 hover:brightness-105'
+                          !disabled && (text.trim() || attachedFiles.length > 0 || isGenerating) && 'hover:shadow-lg hover:scale-105 hover:brightness-105'
                         )}
-                        aria-label="Send message"
+                        aria-label={isGenerating ? "Stop generation" : "Send message"}
                       >
                         {isProcessingFiles ? (
                           <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                        ) : isGenerating ? (
+                          <Square className={hasThread ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         ) : (
                           <Send className={hasThread ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         )}
-                        {attachedFiles.length > 0 && !isProcessingFiles && (
+                        {attachedFiles.length > 0 && !isProcessingFiles && !isGenerating && (
                           <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 text-[9px] text-white flex items-center justify-center font-bold">
                             {attachedFiles.length}
                           </span>
@@ -588,7 +597,8 @@ export function EnhancedComposer({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {isProcessingFiles ? 'Processing files...' : 
+                      {isProcessingFiles ? 'Processing files...' :
+                       isGenerating ? 'Stop generation' : 
                        disabled ? 'Please wait...' : 
                        attachedFiles.length > 0 ? `Send with ${attachedFiles.length} file(s) (Enter)` :
                        'Send message (Enter)'}

@@ -18,7 +18,7 @@ export default function Page() {
   const { user, loading, signOut } = useAuth();
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const { threads, createThread, deleteThread, updateThread, refreshThreads } = useThreads();
-  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage, depthMode, setDepthMode, conversationSummary, continuationPrompt, forceContinue, cancelContinuation } = useChat({
+  const { messages, send, streaming, model, setModel, clearMessages, loading: messagesLoading, usage, depthMode, setDepthMode, conversationSummary, continuationPrompt, forceContinue, cancelContinuation, stopGeneration } = useChat({
     threadId: currentThreadId,
     onMessageSaved: () => refreshThreads(),
   });
@@ -61,16 +61,21 @@ export default function Page() {
     
     // Create thread if it doesn't exist
     let threadId = currentThreadId;
+    let isNewThread = false;
     if (!threadId) {
       console.log('Creating new thread...');
       const thread = await createThread(model);
       if (thread) {
         threadId = thread.id;
         setCurrentThreadId(thread.id);
+        isNewThread = true;
         console.log('Thread created:', thread.id);
         
         // Auto-generate title from first message (first 50 chars)
         const title = text.length > 50 ? text.substring(0, 50) + '...' : text;
+        
+        // Small delay to ensure real-time INSERT event is processed first
+        await new Promise(resolve => setTimeout(resolve, 100));
         await updateThread(thread.id, { title });
       }
     }
@@ -199,6 +204,8 @@ export default function Page() {
               onDepthModeChange={setDepthMode}
               tokenBudget={usage.budget}
               threadId={currentThreadId}
+              onStop={stopGeneration}
+              isGenerating={streaming}
             />
           </div>
         </div>
@@ -236,6 +243,8 @@ export default function Page() {
                 onDepthModeChange={setDepthMode}
                 tokenBudget={usage.budget}
                 threadId={currentThreadId}
+                onStop={stopGeneration}
+                isGenerating={streaming}
               />
             </div>
           </div>

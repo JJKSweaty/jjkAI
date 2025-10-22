@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { streamChat } from '@/lib/sse';
 import { Message } from '@/lib/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
@@ -56,6 +56,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     continuationCount: number;
     currentResponse: string;
   } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { messages, setMessages, saveMessages, loading } = useMessages(threadId);
   const { user } = useAuth();
 
@@ -142,6 +143,9 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     setMessages(newMessages);
     setStreaming(true);
 
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     // Auto-detect or use selected depth mode
     const selectedDepthMode = detectDepthMode(text);
     const budget = tokenManager.getTokenBudget(selectedDepthMode);
@@ -176,6 +180,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
       userId: user?.id,
       userEmail: user?.email,
       threadId: activeThreadId || undefined,
+      signal: abortControllerRef.current.signal,
       onToken: (token: string) => {
         reply.content += token;
         setMessages([...newMessages, { ...reply }]);
@@ -328,6 +333,14 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     setContinuationPrompt(null);
   }
 
+  function stopGeneration() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setStreaming(false);
+    }
+  }
+
   return { 
     messages, 
     send, 
@@ -342,6 +355,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
     conversationSummary,
     continuationPrompt,
     forceContinue,
-    cancelContinuation
+    cancelContinuation,
+    stopGeneration
   };
 }

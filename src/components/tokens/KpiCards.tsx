@@ -59,41 +59,79 @@ interface KpiCardsProps {
     active_users: number;
     avg_latency_ms: number;
   };
+  models?: Array<{
+    model: string;
+    input: number;
+    output: number;
+    reasoning: number;
+    cost_usd: number;
+    requests: number;
+  }>;
   isLoading?: boolean;
+  showMyUsage?: boolean;
 }
 
-export function KpiCards({ summary, isLoading }: KpiCardsProps) {
+export function KpiCards({ summary, models = [], isLoading, showMyUsage = false }: KpiCardsProps) {
+  // Calculate model-specific totals for display
+  const getModelDisplayName = (model: string) => {
+    if (model.includes('sonnet')) return 'Sonnet';
+    if (model.includes('haiku')) return 'Haiku';
+    if (model.includes('opus')) return 'Opus';
+    return model.split('-').slice(0, 2).join('-');
+  };
+
+  const modelChips = models.slice(0, 3).map(m => ({
+    label: getModelDisplayName(m.model),
+    value: (m.input + m.output + m.reasoning).toLocaleString()
+  }));
+
+  const costTitle = showMyUsage ? 'Your Total Cost' : 'Total Cost';
+  const tokensTitle = showMyUsage ? 'Your Total Tokens' : 'Total Tokens';
+  const usersTitle = showMyUsage ? 'Your Requests' : 'Active Users';
+  const modelsTitle = showMyUsage ? 'Models You Used' : 'Models Used';
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
       <KpiCard
-        title="Total Cost"
+        title={costTitle}
         value={summary ? `$${summary.total_cost_usd.toFixed(2)}` : '$0.00'}
+        chips={
+          models.slice(0, 2).map(m => ({
+            label: getModelDisplayName(m.model),
+            value: `$${m.cost_usd.toFixed(2)}`
+          }))
+        }
         isLoading={isLoading}
       />
       <KpiCard
-        title="Total Tokens"
+        title={tokensTitle}
         value={summary ? summary.total_tokens.toLocaleString() : '0'}
+        chips={modelChips}
+        isLoading={isLoading}
+      />
+      <KpiCard
+        title={usersTitle}
+        value={showMyUsage ? (models.reduce((sum, m) => sum + m.requests, 0)) : (summary?.active_users ?? 0)}
         chips={
           summary
             ? [
-                { label: 'In', value: summary.total_input.toLocaleString() },
-                { label: 'Out', value: summary.total_output.toLocaleString() },
-                ...(summary.total_reasoning > 0
-                  ? [{ label: 'Reason', value: summary.total_reasoning.toLocaleString() }]
-                  : []),
+                { label: showMyUsage ? 'Total' : 'Requests', value: models.reduce((sum, m) => sum + m.requests, 0).toLocaleString() },
               ]
             : []
         }
         isLoading={isLoading}
       />
       <KpiCard
-        title="Active Users"
-        value={summary?.active_users ?? 0}
-        isLoading={isLoading}
-      />
-      <KpiCard
-        title="Avg Latency"
-        value={summary ? `${Math.round(summary.avg_latency_ms)}ms` : '0ms'}
+        title={modelsTitle}
+        value={models.length}
+        chips={
+          summary
+            ? [
+                { label: 'Input', value: summary.total_input.toLocaleString() },
+                { label: 'Output', value: summary.total_output.toLocaleString() },
+              ]
+            : []
+        }
         isLoading={isLoading}
       />
     </div>

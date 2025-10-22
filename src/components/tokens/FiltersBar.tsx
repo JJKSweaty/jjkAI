@@ -1,30 +1,36 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
+import { Calendar, User } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 
 interface FiltersBarProps {
   onDateRangeChange: (from: string, to: string) => void;
   onModelChange: (model: string) => void;
+  onUserToggle?: (showMyUsage: boolean) => void;
   onExport: () => void;
   onRefresh: () => void;
   models: string[];
+  showMyUsage?: boolean;
 }
 
 export function FiltersBar({
   onDateRangeChange,
   onModelChange,
+  onUserToggle,
   onExport,
   onRefresh,
   models,
+  showMyUsage = false,
 }: FiltersBarProps) {
   const [preset, setPreset] = useState('7d');
 
   const handlePresetChange = (value: string) => {
     setPreset(value);
     const to = new Date();
+    to.setHours(23, 59, 59, 999);
     let from = new Date();
 
     switch (value) {
@@ -41,6 +47,7 @@ export function FiltersBar({
         from.setDate(to.getDate() - 7);
     }
 
+    from.setHours(0, 0, 0, 0);
     onDateRangeChange(from.toISOString(), to.toISOString());
   };
 
@@ -73,6 +80,20 @@ export function FiltersBar({
           ))}
         </SelectContent>
       </Select>
+
+      {onUserToggle && (
+        <Button
+          variant={showMyUsage ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => onUserToggle(!showMyUsage)}
+          className="h-10 sm:h-9 gap-2"
+        >
+          <User className="h-4 w-4" />
+          <span className="hidden sm:inline">{showMyUsage ? 'My Usage' : 'All Users'}</span>
+          <span className="sm:hidden">{showMyUsage ? 'Mine' : 'All'}</span>
+          {showMyUsage && <Badge variant="secondary" className="ml-1 text-xs">Active</Badge>}
+        </Button>
+      )}
 
       <div className="sm:ml-auto flex gap-2">
         <Button variant="outline" size="sm" onClick={onRefresh} className="flex-1 sm:flex-none h-10 sm:h-9">
