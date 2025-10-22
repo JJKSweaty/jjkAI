@@ -4,6 +4,7 @@ import { ChatRequest } from '../utils/types.js';
 import { promptCache } from '../utils/promptCache.js';
 import { autoContinuation } from '../utils/autoContinuation.js';
 import { logUsage } from '../utils/usageLogger.js';
+import { hasThreadDocuments, searchThreadDocuments, buildContext, generateCitations } from '../lib/retrieval.js';
 
 // Claude model pricing and capabilities
 const CLAUDE_MODELS = {
@@ -256,6 +257,37 @@ export async function registerChatRoutes(app: FastifyInstance) {
         })}\n\n`);
         reply.raw.end();
         return;
+      }
+      
+      // STEP 4.5: DOCUMENT RETRIEVAL (RAG for PDF context)
+      let documentContext = '';
+      if (body.threadId) {
+        try {
+          const hasDocuments = await hasThreadDocuments(body.threadId);
+          if (hasDocuments) {
+            console.log(`📄 Thread has documents - performing RAG retrieval`);
+            const searchResults = await searchThreadDocuments(
+              body.threadId,
+              lastMessage,
+              { limit: 3, mode: 'keyword' }
+            );
+            
+            if (searchResults.length > 0) {
+              const citations = generateCitations(searchResults);
+              documentContext = buildContext(searchResults, citations);
+              console.log(`✅ Retrieved ${searchResults.length} relevant chunks from documents`);
+              
+              // Prepend document context to the last message
+              const lastMsg = optimizedMessages[optimizedMessages.length - 1];
+              if (lastMsg && lastMsg.role === 'user') {
+                lastMsg.content = `[Document Context]\n${documentContext}\n\n[User Question]\n${lastMsg.content}`;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Document retrieval error:', error);
+          // Continue without documents
+        }
       }
       
       // STEP 5: SET OUTPUT CAP (Tight max_tokens by task class)

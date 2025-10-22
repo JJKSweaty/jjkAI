@@ -47,12 +47,14 @@ import {
 } from '@/lib/fileAttachment';
 
 interface EnhancedComposerProps {
-  onSend: (text: string) => void;
+  onSend: (text: string, attachedFiles?: AttachedFile[]) => void;
   disabled?: boolean;
   className?: string;
   hasThread?: boolean; // true if conversation has ≥1 messages
   currentModel?: string;
   onModelChange?: (model: string) => void;
+  mode?: 'Auto' | 'Manual';
+  onModeChange?: (mode: 'Auto' | 'Manual') => void;
   depthMode?: DepthMode;
   onDepthModeChange?: (mode: DepthMode) => void;
   tokenBudget?: {
@@ -60,6 +62,8 @@ interface EnhancedComposerProps {
     maxOutput?: number;
     used?: number;
   };
+  threadId?: string | null; // Current thread ID for PDF uploads
+  onPdfUploaded?: (documentId: string) => void; // Callback when PDF is uploaded
 }
 
 export function EnhancedComposer({ 
@@ -69,33 +73,23 @@ export function EnhancedComposer({
   hasThread = false,
   currentModel,
   onModelChange,
+  mode = 'Auto',
+  onModeChange,
   depthMode = 'Standard',
   onDepthModeChange,
-  tokenBudget
+  tokenBudget,
+  threadId,
+  onPdfUploaded
 }: EnhancedComposerProps) {
   const [text, setText] = React.useState('');
   const [context, setContext] = React.useState('');
   const [attachedFiles, setAttachedFiles] = React.useState<AttachedFile[]>([]);
   const [isProcessingFiles, setIsProcessingFiles] = React.useState(false);
-  const [mode, setMode] = React.useState<'Auto' | 'Manual'>(() => {
-    // Load mode from localStorage or default to Auto
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('composer-mode') as 'Auto' | 'Manual') || 'Auto';
-    }
-    return 'Auto';
-  });
   const [sources, setSources] = React.useState<'All Sources' | 'Local' | 'Web'>('All Sources');
   const [showContext, setShowContext] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Save mode to localStorage when it changes
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('composer-mode', mode);
-    }
-  }, [mode]);
 
   // Auto-resize textarea based on content
   React.useEffect(() => {
@@ -134,16 +128,29 @@ export function EnhancedComposer({
     if (!trimmed && attachedFiles.length === 0) return;
     if (disabled) return;
     
-    // Format message with attached files
+    // Separate PDFs from other files
+    const pdfFiles = attachedFiles.filter(f => f.file.name.toLowerCase().endsWith('.pdf'));
+    const otherFiles = attachedFiles.filter(f => !f.file.name.toLowerCase().endsWith('.pdf'));
+    
+    // Format message with context and non-PDF files
     let fullMessage = context ? `Context: ${context}\n\n${trimmed}` : trimmed;
     
-    // Add file contents to message
-    if (attachedFiles.length > 0) {
-      const fileContents = attachedFiles.map(f => formatFileForMessage(f)).join('\n');
+    // Add non-PDF file contents to message (text files, images, etc.)
+    if (otherFiles.length > 0) {
+      const fileContents = otherFiles.map(f => formatFileForMessage(f)).join('\n');
       fullMessage = fullMessage ? `${fullMessage}${fileContents}` : fileContents;
     }
     
-    onSend(fullMessage);
+    // Add a note about uploaded PDFs
+    if (pdfFiles.length > 0) {
+      const pdfNames = pdfFiles.map(f => f.file.name).join(', ');
+      fullMessage = fullMessage 
+        ? `${fullMessage}\n\n[Uploaded PDFs for context: ${pdfNames}]`
+        : `[Uploaded PDFs for context: ${pdfNames}]`;
+    }
+    
+    // Pass attachedFiles to parent for PDF upload handling
+    onSend(fullMessage, attachedFiles);
     
     setText('');
     setContext('');
@@ -275,11 +282,17 @@ export function EnhancedComposer({
                     {attachedFiles.map((attachedFile) => {
                       const fileName = attachedFile.file.name;
                       const displayName = fileName.length > 20 ? fileName.substring(0, 20) + '...' : fileName;
+                      const isPdf = fileName.toLowerCase().endsWith('.pdf');
                       return (
                         <Badge
                           key={attachedFile.id}
                           variant="secondary"
-                          className="bg-primary/10 text-primary border-primary/20 text-xs flex items-center gap-1 pr-1"
+                          className={cn(
+                            "text-xs flex items-center gap-1 pr-1",
+                            isPdf 
+                              ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" 
+                              : "bg-primary/10 text-primary border-primary/20"
+                          )}
                         >
                           <span>{getFileIcon(attachedFile.type)}</span>
                           <span>{displayName}</span>
@@ -428,7 +441,7 @@ export function EnhancedComposer({
                         </TooltipContent>
                         <DropdownMenuContent align="start" className="w-64">
                           {/* Auto mode - first option */}
-                          <DropdownMenuItem onClick={() => setMode('Auto')}>
+                          <DropdownMenuItem onClick={() => onModeChange?.('Auto')}>
                             <Brain className="h-4 w-4 mr-2" />
                             <div className="flex flex-col">
                               <span>Auto</span>
@@ -443,7 +456,7 @@ export function EnhancedComposer({
                             <DropdownMenuItem
                               key={model.id}
                               onClick={() => {
-                                setMode('Manual');
+                                onModeChange?.('Manual');
                                 onModelChange?.(model.id);
                               }}
                               className="flex flex-col items-start"
@@ -483,11 +496,17 @@ export function EnhancedComposer({
                       {attachedFiles.map((attachedFile) => {
                         const fileName = attachedFile.file.name;
                         const displayName = fileName.length > 15 ? fileName.substring(0, 15) + '...' : fileName;
+                        const isPdf = fileName.toLowerCase().endsWith('.pdf');
                         return (
                           <Badge
                             key={attachedFile.id}
                             variant="secondary"
-                            className="h-6 text-xs flex items-center gap-1 pr-1 bg-primary/5 hover:bg-primary/10 transition-colors"
+                            className={cn(
+                              "h-6 text-xs flex items-center gap-1 pr-1 transition-colors",
+                              isPdf 
+                                ? "bg-orange-500/5 hover:bg-orange-500/10 text-orange-600 dark:text-orange-400" 
+                                : "bg-primary/5 hover:bg-primary/10"
+                            )}
                           >
                             <span className="text-sm">{getFileIcon(attachedFile.type)}</span>
                             <span>{displayName}</span>
@@ -516,7 +535,9 @@ export function EnhancedComposer({
                       // Font sizing - slightly smaller on mobile
                       hasThread ? 'text-sm sm:text-[15px]' : 'text-[15px] sm:text-base',
                       // Scrollbar styling - sleek and modern
-                      'scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent'
+                      'scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent',
+                      // Vertical centering for compact mode
+                      hasThread && 'flex items-center'
                     )}
                     disabled={disabled || isProcessingFiles}
                     aria-label="Message"
@@ -524,7 +545,7 @@ export function EnhancedComposer({
                     style={{
                       resize: 'none',
                       lineHeight: '1.5',
-                      padding: '6px 0',
+                      padding: hasThread ? '8px 0' : '6px 0',
                       minHeight: hasThread ? '32px' : '36px',
                     }}
                     onKeyDown={(e) => {
@@ -606,7 +627,7 @@ export function EnhancedComposer({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-64">
                         {/* Auto mode - first option */}
-                        <DropdownMenuItem onClick={() => setMode('Auto')}>
+                        <DropdownMenuItem onClick={() => onModeChange?.('Auto')}>
                           <Brain className="h-4 w-4 mr-2" />
                           <div className="flex flex-col">
                             <span>Auto</span>
@@ -621,7 +642,7 @@ export function EnhancedComposer({
                           <DropdownMenuItem
                             key={model.id}
                             onClick={() => {
-                              setMode('Manual');
+                              onModeChange?.('Manual');
                               onModelChange?.(model.id);
                             }}
                             className="flex flex-col items-start"

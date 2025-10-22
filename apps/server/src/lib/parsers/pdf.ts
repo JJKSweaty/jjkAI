@@ -4,16 +4,8 @@
  */
 
 import { v4 as uuid } from "uuid";
+import pdfParse from "pdf-parse";
 import type { UniversalDoc, DocumentBlock } from "../../types/documents";
-
-// Dynamic import to avoid pdf-parse loading test files on startup
-let pdfParse: any = null;
-async function getPdfParse() {
-  if (!pdfParse) {
-    pdfParse = (await import("pdf-parse")).default;
-  }
-  return pdfParse;
-}
 
 /**
  * Check if PDF is scanned (needs OCR)
@@ -21,8 +13,7 @@ async function getPdfParse() {
  */
 async function isScannedPDF(buffer: Buffer): Promise<boolean> {
   try {
-    const pdf = await getPdfParse();
-    const data = await pdf(buffer, {
+    const data = await pdfParse(buffer, {
       max: 3, // Only check first 3 pages
     });
     
@@ -116,8 +107,7 @@ export async function extractPDF(
     }
     
     // Parse full document
-    const pdf = await getPdfParse();
-    const data = await pdf(buffer);
+    const data = await pdfParse(buffer);
     
     // Split into pages using form feed character
     const pageTexts = data.text.split(/\f/);

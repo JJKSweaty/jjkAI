@@ -14,10 +14,19 @@ import type { ExtractionResult } from "../types/documents";
 export async function documentRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/documents/upload
-   * Upload and process a document
+   * Upload and process a document for a specific thread
+   * Query params: thread_id (required)
    */
   fastify.post("/upload", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
+      // Get thread_id from query params
+      const query = request.query as { thread_id?: string };
+      const threadId = query.thread_id;
+
+      if (!threadId) {
+        return reply.code(400).send({ error: "thread_id is required" });
+      }
+
       // Get uploaded file from multipart form data
       const data = await request.file();
 
@@ -44,11 +53,12 @@ export async function documentRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Store document in database
+      // Store document in database with thread_id
       const { data: docData, error: docError } = await supabase
         .from("documents")
         .insert({
           doc_id: result.doc.docId,
+          thread_id: threadId,
           title: result.doc.title,
           filename: result.doc.sourceFilename,
           mime_type: result.doc.mime,

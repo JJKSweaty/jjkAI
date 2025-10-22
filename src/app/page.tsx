@@ -23,6 +23,21 @@ export default function Page() {
     onMessageSaved: () => refreshThreads(),
   });
   const router = useRouter();
+  
+  // Sync mode state with composer's localStorage
+  const [mode, setMode] = useState<'Auto' | 'Manual'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('composer-mode') as 'Auto' | 'Manual') || 'Auto';
+    }
+    return 'Auto';
+  });
+  
+  // Save mode to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('composer-mode', mode);
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -41,7 +56,7 @@ export default function Page() {
     }
   }, []);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, attachedFiles?: any[]) => {
     // Create thread if it doesn't exist
     let threadId = currentThreadId;
     if (!threadId) {
@@ -53,6 +68,37 @@ export default function Page() {
         // Auto-generate title from first message (first 50 chars)
         const title = text.length > 50 ? text.substring(0, 50) + '...' : text;
         await updateThread(thread.id, { title });
+      }
+    }
+    
+    // Upload PDFs to backend if thread exists and files are attached
+    if (threadId && attachedFiles && attachedFiles.length > 0) {
+      const pdfFiles = attachedFiles.filter(f => f.file.name.toLowerCase().endsWith('.pdf'));
+      
+      if (pdfFiles.length > 0) {
+        console.log(`Uploading ${pdfFiles.length} PDF(s) to thread ${threadId}...`);
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8787';
+        
+        await Promise.all(pdfFiles.map(async (pdfFile) => {
+          const formData = new FormData();
+          formData.append('file', pdfFile.file);
+          
+          try {
+            const response = await fetch(`${apiBase}/api/documents/upload?thread_id=${threadId}`, {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              console.log(`✅ PDF uploaded: ${pdfFile.file.name}`, result);
+            } else {
+              console.error(`❌ PDF upload failed: ${pdfFile.file.name}`);
+            }
+          } catch (error) {
+            console.error(`Error uploading PDF ${pdfFile.file.name}:`, error);
+          }
+        }));
       }
     }
     
@@ -107,6 +153,8 @@ export default function Page() {
                 currentModel={model} 
                 onModelChange={setModel}
                 disabled={streaming}
+                mode={mode}
+                onModeChange={setMode}
               />
             </div>
           </div>
@@ -130,9 +178,12 @@ export default function Page() {
               hasThread={false}
               currentModel={model}
               onModelChange={setModel}
+              mode={mode}
+              onModeChange={setMode}
               depthMode={depthMode}
               onDepthModeChange={setDepthMode}
               tokenBudget={usage.budget}
+              threadId={currentThreadId}
             />
           </div>
         </div>
@@ -164,9 +215,12 @@ export default function Page() {
                 hasThread={true}
                 currentModel={model}
                 onModelChange={setModel}
+                mode={mode}
+                onModeChange={setMode}
                 depthMode={depthMode}
                 onDepthModeChange={setDepthMode}
                 tokenBudget={usage.budget}
+                threadId={currentThreadId}
               />
             </div>
           </div>

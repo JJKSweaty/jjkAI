@@ -258,3 +258,90 @@ export function buildContext(
 
   return contextChunks.join("\n\n---\n\n");
 }
+
+/**
+ * Thread-specific retrieval helpers
+ */
+
+/**
+ * Check if a thread has any documents
+ */
+export async function hasThreadDocuments(threadId: string): Promise<boolean> {
+  if (!supabase) return false;
+
+  try {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('doc_id')
+      .eq('thread_id', threadId)
+      .limit(1);
+
+    return !error && !!data && data.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get all document IDs for a thread
+ */
+export async function getThreadDocumentIds(threadId: string): Promise<string[]> {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('doc_id')
+      .eq('thread_id', threadId);
+
+    if (error || !data) return [];
+    return data.map(d => d.doc_id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Search documents within a specific thread
+ */
+export async function searchThreadDocuments(
+  threadId: string,
+  query: string,
+  options: Partial<SearchOptions> = {}
+): Promise<SearchResult[]> {
+  // Get document IDs for this thread
+  const docIds = await getThreadDocumentIds(threadId);
+  
+  if (docIds.length === 0) {
+    return [];
+  }
+
+  // Search within those documents
+  return searchChunks({
+    query,
+    docIds,
+    limit: options.limit || 5,
+    mode: options.mode || 'keyword',
+    ...options,
+  });
+}
+
+/**
+ * Get document summary for a thread
+ */
+export async function getThreadDocumentsSummary(threadId: string) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('documents')
+    .select('doc_id, title, filename, pages, chunk_count, created_at')
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching thread documents:', error);
+    return [];
+  }
+
+  return data || [];
+}

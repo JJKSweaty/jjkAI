@@ -8,34 +8,77 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Brain } from 'lucide-react';
 import { MODELS } from '@/lib/constants';
 
 interface ModelSwitcherProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   disabled?: boolean;
+  mode?: 'Auto' | 'Manual';
+  onModeChange?: (mode: 'Auto' | 'Manual') => void;
 }
 
-export function ModelSwitcher({ currentModel, onModelChange, disabled }: ModelSwitcherProps) {
+export function ModelSwitcher({ 
+  currentModel, 
+  onModelChange, 
+  disabled,
+  mode = 'Manual',
+  onModeChange
+}: ModelSwitcherProps) {
   const selectedModel = MODELS.find(m => m.id === currentModel) || MODELS[0];
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" disabled={disabled} className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3">
-          <span className="hidden sm:inline">{selectedModel.name}</span>
-          <span className="sm:hidden">{selectedModel.name.split(' ')[1]}</span>
+        <Button 
+          variant="outline" 
+          disabled={disabled} 
+          className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+        >
+          {mode === 'Auto' ? (
+            <>
+              <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Auto</span>
+            </>
+          ) : (
+            <>
+              <span className="hidden sm:inline">{selectedModel.name}</span>
+              <span className="sm:hidden">{selectedModel.name.split(' ')[1]}</span>
+            </>
+          )}
           <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 sm:w-64">
         <DropdownMenuLabel className="text-sm">Select Model</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        
+        {/* Auto mode option */}
+        {onModeChange && (
+          <>
+            <DropdownMenuItem
+              onClick={() => onModeChange('Auto')}
+              className="flex items-center gap-2 py-3 sm:py-2"
+            >
+              <Brain className="h-4 w-4" />
+              <div className="flex flex-col">
+                <div className="font-medium text-sm">Auto</div>
+                <div className="text-xs text-muted-foreground">AI selects best model</div>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        
+        {/* Manual model selection */}
         {MODELS.map((model) => (
           <DropdownMenuItem
             key={model.id}
-            onClick={() => onModelChange(model.id)}
+            onClick={() => {
+              onModeChange?.('Manual');
+              onModelChange(model.id);
+            }}
             className="flex flex-col items-start py-3 sm:py-2"
           >
             <div className="font-medium text-sm">{model.name}</div>
