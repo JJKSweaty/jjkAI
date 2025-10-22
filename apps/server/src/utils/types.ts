@@ -8,6 +8,7 @@ export interface ChatRequest {
   messages: Message[];
   mode?: 'auto' | 'manual';
   threadId?: string;
+  depthMode?: 'Quick' | 'Standard' | 'DeepDive';
 }
 
 export interface StreamEvent {

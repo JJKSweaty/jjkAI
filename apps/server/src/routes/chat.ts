@@ -52,11 +52,6 @@ function classifyTask(message: string): TaskClass {
     return 'detailed';
   }
   
-  // QA: Short questions, simple queries
-  if (len < 100 || /\b(what\s+is|who\s+is|when|where|define|yes\s+or\s+no|count|list)\b/i.test(message)) {
-    return 'qa';
-  }
-  
   // Bugfix: Error messages, debugging
   if (/\b(error|bug|fix|broken|not\s+working|issue|debug|crash|exception)\b/i.test(message)) {
     return 'bugfix';
@@ -72,22 +67,41 @@ function classifyTask(message: string): TaskClass {
     return 'plan';
   }
   
-  // Code generation: Large multi-file or >150 LOC
-  if (/\b(implement|create|build|write|generate|scaffold)\b/i.test(message) && len > 800) {
-    return 'codegen-large';
-  }
-  
-  // Code generation: Small single-file
-  if (/\b(code|function|class|component|implement|write\s+(a\s+)?function)\b/i.test(message)) {
+  // Code generation: AGGRESSIVE DETECTION
+  // Large multi-file or complex projects
+  if (/\b(app|application|system|project|full[\s-]?stack|website|site|web|api|backend|frontend|microservice|service|platform)\b/i.test(message) ||
+      /\b(implement|create|build|make|write|generate|develop|code|scaffold|setup|set\s+up)\b/i.test(message) && len > 30) {
+    // If mentions large scope or multiple features, use codegen-large
+    if (len > 100 || /\b(with|and|including|plus|also|authentication|auth|database|db|api|crud|rest|graphql|tests?|testing)\b/i.test(message)) {
+      return 'codegen-large';
+    }
     return 'codegen-small';
   }
   
-  // Default to QA for efficiency
-  return 'qa';
+  // Code generation: Traditional patterns (fallback)
+  if (/\b(code|function|class|component|module|package|library)\b/i.test(message)) {
+    if (len > 200) {
+      return 'codegen-large';
+    }
+    return 'codegen-small';
+  }
+  
+  // QA: Only SHORT and EXPLICIT questions
+  if (len < 50 && /\b(what\s+is|who\s+is|when|where|why|how\s+to|define|explain)\b/i.test(message)) {
+    return 'qa';
+  }
+  
+  // Default to codegen-small for safety (better to over-allocate than under-allocate)
+  return 'codegen-small';
 }
 
 // Determine optimal model based on task class (ULTRA-AGGRESSIVE: 95% Haiku)
-function selectOptimalModel(taskClass: TaskClass, messageLength: number): string {
+function selectOptimalModel(taskClass: TaskClass, messageLength: number, depthMode?: string): string {
+  // DeepDive mode ALWAYS uses Sonnet for maximum quality
+  if (depthMode === 'DeepDive') {
+    return 'claude-3-5-sonnet-latest';
+  }
+  
   // Sonnet ONLY for: large codegen, detailed analysis, or complex reasoning
   if (taskClass === 'codegen-large' || 
       (taskClass === 'detailed' && messageLength > 1000)) {
@@ -99,7 +113,12 @@ function selectOptimalModel(taskClass: TaskClass, messageLength: number): string
 }
 
 // Get optimal max_tokens based on task class (TIGHT CAPS)
-function getMaxTokensByClass(taskClass: TaskClass): number {
+function getMaxTokensByClass(taskClass: TaskClass, depthMode?: string): number {
+  // DeepDive mode: NO LIMIT - let it use as much as needed
+  if (depthMode === 'DeepDive') {
+    return 8192; // Maximum allowed by API, optimize for token efficiency
+  }
+  
   const caps: Record<TaskClass, number> = {
     'qa': 256,              // Short answers
     'bugfix': 512,          // Diagnosis + patch + test
@@ -190,8 +209,8 @@ export async function registerChatRoutes(app: FastifyInstance) {
       
       if (body.mode === 'auto' || !body.mode) {
         // Auto mode: Use task-based intelligent routing
-        finalModel = selectOptimalModel(taskClass, lastMessage.length);
-        console.log(`🤖 Auto mode: Selected ${finalModel} for ${taskClass} task`);
+        finalModel = selectOptimalModel(taskClass, lastMessage.length, body.depthMode);
+        console.log(`🤖 Auto mode: Selected ${finalModel} for ${taskClass} task (DepthMode: ${body.depthMode || 'Standard'})`);
       } else {
         // Manual mode: Use the specified model
         finalModel = body.model || 'claude-3-5-haiku-latest';
@@ -239,13 +258,13 @@ export async function registerChatRoutes(app: FastifyInstance) {
       }
       
       // STEP 5: SET OUTPUT CAP (Tight max_tokens by task class)
-      const maxTokens = getMaxTokensByClass(taskClass);
+      const maxTokens = getMaxTokensByClass(taskClass, body.depthMode);
       
       const reductionPercent = body.messages.length > 1 
         ? Math.round((1 - optimizedMessages.length / body.messages.length) * 100) 
         : 0;
       
-      console.log(`🚀 Token Economy: ${taskClass} → ${finalModel} | max_tokens: ${maxTokens} | context: ${body.messages.length} → ${optimizedMessages.length} msgs (${reductionPercent}% reduction)`);
+      console.log(`🚀 Token Economy: ${taskClass} → ${finalModel} | max_tokens: ${maxTokens} | context: ${body.messages.length} → ${optimizedMessages.length} msgs (${reductionPercent}% reduction) | DepthMode: ${body.depthMode || 'Standard'}`);
 
       // Set SSE headers with CORS
       reply.raw.writeHead(200, {
