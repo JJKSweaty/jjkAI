@@ -34,12 +34,18 @@ export async function searchChunks(
 
   // Call PostgreSQL function with all parameters
   // Uses ts_rank for relevance scoring
-  const { data, error } = await supabase.rpc("search_chunks", {
+  const params: any = {
     search_query: query,
     max_results: limit,
     min_score: minScore,
-    filter_doc_ids: docIds || null,
-  });
+  };
+  
+  // Only add filter_doc_ids if provided
+  if (docIds && docIds.length > 0) {
+    params.filter_doc_ids = docIds;
+  }
+
+  const { data, error } = await supabase.rpc("search_chunks", params);
 
   if (error) {
     console.error("Search error:", error);

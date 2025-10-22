@@ -1,6 +1,9 @@
--- Full-Text Search Function for Document Chunks
--- Uses PostgreSQL's ts_rank for BM25-style relevance scoring
+-- Drop the old function first to avoid ambiguity
+DROP FUNCTION IF EXISTS search_chunks(TEXT, INT, FLOAT);
+DROP FUNCTION IF EXISTS search_chunks(TEXT, INT, FLOAT, UUID[]);
+DROP FUNCTION IF EXISTS search_chunks(TEXT, INT, DOUBLE PRECISION, UUID[]);
 
+-- Then create the new one with 4 parameters
 CREATE OR REPLACE FUNCTION search_chunks(
   search_query TEXT,
   max_results INT DEFAULT 10,
@@ -58,7 +61,3 @@ $$;
 GRANT EXECUTE ON FUNCTION search_chunks(TEXT, INT, FLOAT, UUID[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION search_chunks(TEXT, INT, FLOAT, UUID[]) TO anon;
 GRANT EXECUTE ON FUNCTION search_chunks(TEXT, INT, FLOAT, UUID[]) TO service_role;
-
--- Example usage:
--- SELECT * FROM search_chunks('revenue Q4', 10, 0.01, NULL);
--- SELECT * FROM search_chunks('revenue Q4', 10, 0.01, ARRAY['doc-uuid-1', 'doc-uuid-2']::UUID[]);
