@@ -175,7 +175,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
       conversationSummary,
       userId: user?.id,
       userEmail: user?.email,
-      threadId: threadId || undefined,
+      threadId: activeThreadId || undefined,
       onToken: (token: string) => {
         reply.content += token;
         setMessages([...newMessages, { ...reply }]);

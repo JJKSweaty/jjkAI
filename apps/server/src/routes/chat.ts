@@ -4,7 +4,25 @@ import { ChatRequest } from '../utils/types.js';
 import { promptCache } from '../utils/promptCache.js';
 import { autoContinuation } from '../utils/autoContinuation.js';
 import { logUsage } from '../utils/usageLogger.js';
-import { hasThreadDocuments, searchThreadDocuments, buildContext, generateCitations } from '../lib/retrieval.js';
+import { hasThreadDocuments, searchThreadDocuments, buildContext, generateCitations, getFirstChunks } from '../lib/retrieval.js';
+
+/**
+ * Simple keyword extraction for query rewriting
+ * Removes stop words and extracts meaningful terms
+ */
+function extractKeywords(query: string): string[] {
+  const stopWords = new Set([
+    'what', 'is', 'this', 'the', 'a', 'an', 'about', 'does', 'do', 'did',
+    'can', 'could', 'would', 'should', 'tell', 'me', 'please', 'file',
+    'document', 'pdf', 'talk', 'say', 'describe', 'explain', 'show', 'give'
+  ]);
+  
+  return query
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word));
+}
 
 // Claude model pricing and capabilities
 const CLAUDE_MODELS = {
@@ -201,6 +219,9 @@ export async function registerChatRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'Invalid messages format' });
       }
 
+      // Log request details
+      console.log(`📨 Chat request - threadId: ${body.threadId || 'NONE'}, messages: ${body.messages.length}`);
+
       // STEP 1: TASK CLASSIFICATION (Pre-Flight Pipeline)
       const lastMessage = body.messages[body.messages.length - 1]?.content || '';
       const taskClass = classifyTask(lastMessage);
@@ -266,26 +287,63 @@ export async function registerChatRoutes(app: FastifyInstance) {
           const hasDocuments = await hasThreadDocuments(body.threadId);
           if (hasDocuments) {
             console.log(`📄 Thread has documents - performing RAG retrieval`);
-            const searchResults = await searchThreadDocuments(
+            
+            // Clean the search query - remove PDF upload notes
+            let userQuery = lastMessage;
+            userQuery = userQuery.replace(/\[Uploaded PDFs for context:.*?\]/g, '').trim();
+            
+            console.log(`🔍 Original query: "${userQuery}"`);
+            
+            // Query rewrite: Extract keywords for better search
+            let searchQuery = userQuery;
+            if (userQuery.length < 100) {
+              // For short questions, extract keywords
+              const keywords = extractKeywords(userQuery);
+              if (keywords.length > 0) {
+                searchQuery = keywords.join(' ');
+                console.log(`🔑 Extracted keywords: "${searchQuery}"`);
+              }
+            }
+            
+            // Try keyword search first
+            let searchResults = await searchThreadDocuments(
               body.threadId,
-              lastMessage,
-              { limit: 3, mode: 'keyword' }
+              searchQuery,
+              { limit: 5, mode: 'keyword' }
             );
+            
+            console.log(`📊 Keyword search returned ${searchResults.length} results`);
+            
+            // Fallback: If no results, get first chunks (good for "what is this about?" questions)
+            if (searchResults.length === 0) {
+              console.log(`🔄 Fallback: Retrieving first chunks from documents`);
+              searchResults = await getFirstChunks(body.threadId, 5);
+              console.log(`📊 Fallback retrieved ${searchResults.length} chunks`);
+            }
             
             if (searchResults.length > 0) {
               const citations = generateCitations(searchResults);
               documentContext = buildContext(searchResults, citations);
+              
               console.log(`✅ Retrieved ${searchResults.length} relevant chunks from documents`);
+              console.log(`📝 Document context length: ${documentContext.length} chars`);
+              console.log(`📄 Context preview: ${documentContext.substring(0, 200)}...`);
               
               // Prepend document context to the last message
               const lastMsg = optimizedMessages[optimizedMessages.length - 1];
               if (lastMsg && lastMsg.role === 'user') {
-                lastMsg.content = `[Document Context]\n${documentContext}\n\n[User Question]\n${lastMsg.content}`;
+                const originalContent = lastMsg.content;
+                lastMsg.content = `[Document Context]\n${documentContext}\n\n[User Question]\n${originalContent}`;
+                console.log(`💬 Updated message with context (${lastMsg.content.length} chars)`);
               }
+            } else {
+              console.log(`⚠️ No chunks available for thread ${body.threadId}`);
             }
+          } else {
+            console.log(`ℹ️ Thread ${body.threadId} has no documents`);
           }
         } catch (error) {
-          console.error('Document retrieval error:', error);
+          console.error('❌ Document retrieval error:', error);
           // Continue without documents
         }
       }

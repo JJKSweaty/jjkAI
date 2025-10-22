@@ -345,3 +345,63 @@ export async function getThreadDocumentsSummary(threadId: string) {
 
   return data || [];
 }
+
+/**
+ * Get first N chunks from thread documents (fallback for "what is this about?" queries)
+ * Retrieves leading chunks which typically contain summaries, intros, etc.
+ */
+export async function getFirstChunks(threadId: string, limit: number = 5): Promise<SearchResult[]> {
+  if (!supabase) return [];
+
+  // Get document IDs for this thread
+  const docIds = await getThreadDocumentIds(threadId);
+  if (docIds.length === 0) return [];
+
+  // Get first chunks from these documents, ordered by page/position
+  const { data, error } = await supabase
+    .from('document_chunks')
+    .select(`
+      chunk_id,
+      doc_id,
+      text,
+      page_start,
+      page_end,
+      section_path,
+      block_ids,
+      documents!inner (
+        title,
+        filename,
+        mime_type,
+        hash
+      )
+    `)
+    .in('doc_id', docIds)
+    .order('page_start', { ascending: true })
+    .order('chunk_id', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching first chunks:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any, index: number) => ({
+    chunk: {
+      id: row.chunk_id,
+      docId: row.doc_id,
+      text: row.text,
+      meta: {
+        title: row.documents.title,
+        sourceFilename: row.documents.filename,
+        mime: row.documents.mime_type,
+        pageStart: row.page_start,
+        pageEnd: row.page_end,
+        sectionPath: row.section_path,
+        blockIds: row.block_ids || [],
+        hash: row.documents.hash,
+      },
+    },
+    score: 1.0 - (index * 0.1), // Decreasing score for later chunks
+    rank: index + 1,
+  }));
+}

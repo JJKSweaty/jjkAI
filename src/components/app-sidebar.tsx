@@ -80,6 +80,29 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
     e.stopPropagation();
     if (confirm('Delete this chat?')) {
       await deleteThread(threadId);
+      
+      // If we deleted the current thread, navigate away
+      if (threadId === currentThreadId) {
+        // Check if there are other threads to switch to
+        const remainingThreads = threads.filter(t => t.id !== threadId);
+        
+        if (remainingThreads.length > 0) {
+          // Switch to the most recent remaining thread
+          const nextThread = remainingThreads[0];
+          if (onThreadSelect) {
+            onThreadSelect(nextThread.id);
+          } else {
+            window.location.href = `/?thread=${nextThread.id}`;
+          }
+        } else {
+          // No threads left, go to new chat
+          if (onNewChat) {
+            onNewChat();
+          } else {
+            window.location.href = '/';
+          }
+        }
+      }
     }
   };
 

@@ -57,13 +57,17 @@ export default function Page() {
   }, []);
 
   const handleSend = async (text: string, attachedFiles?: any[]) => {
+    console.log('handleSend called with:', { text, attachedFiles, currentThreadId });
+    
     // Create thread if it doesn't exist
     let threadId = currentThreadId;
     if (!threadId) {
+      console.log('Creating new thread...');
       const thread = await createThread(model);
       if (thread) {
         threadId = thread.id;
         setCurrentThreadId(thread.id);
+        console.log('Thread created:', thread.id);
         
         // Auto-generate title from first message (first 50 chars)
         const title = text.length > 50 ? text.substring(0, 50) + '...' : text;
@@ -73,37 +77,48 @@ export default function Page() {
     
     // Upload PDFs to backend if thread exists and files are attached
     if (threadId && attachedFiles && attachedFiles.length > 0) {
+      console.log(`Checking ${attachedFiles.length} attached file(s)...`);
       const pdfFiles = attachedFiles.filter(f => f.file.name.toLowerCase().endsWith('.pdf'));
       
       if (pdfFiles.length > 0) {
-        console.log(`Uploading ${pdfFiles.length} PDF(s) to thread ${threadId}...`);
+        console.log(`🔄 Uploading ${pdfFiles.length} PDF(s) to thread ${threadId}...`);
         const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8787';
+        console.log('API Base URL:', apiBase);
         
         await Promise.all(pdfFiles.map(async (pdfFile) => {
           const formData = new FormData();
           formData.append('file', pdfFile.file);
           
+          const uploadUrl = `${apiBase}/api/documents/upload?thread_id=${threadId}`;
+          console.log(`Uploading to: ${uploadUrl}`);
+          
           try {
-            const response = await fetch(`${apiBase}/api/documents/upload?thread_id=${threadId}`, {
+            const response = await fetch(uploadUrl, {
               method: 'POST',
               body: formData,
             });
             
             if (response.ok) {
               const result = await response.json();
-              console.log(`✅ PDF uploaded: ${pdfFile.file.name}`, result);
+              console.log(`✅ PDF uploaded successfully: ${pdfFile.file.name}`, result);
             } else {
-              console.error(`❌ PDF upload failed: ${pdfFile.file.name}`);
+              const errorText = await response.text();
+              console.error(`❌ PDF upload failed (${response.status}): ${pdfFile.file.name}`, errorText);
             }
           } catch (error) {
-            console.error(`Error uploading PDF ${pdfFile.file.name}:`, error);
+            console.error(`❌ Error uploading PDF ${pdfFile.file.name}:`, error);
           }
         }));
+      } else {
+        console.log('No PDF files found in attachments');
       }
+    } else {
+      console.log('Skip upload:', { hasThread: !!threadId, hasFiles: !!attachedFiles, fileCount: attachedFiles?.length });
     }
     
     // Send with the threadId (either existing or newly created)
     if (threadId) {
+      console.log('Sending message to thread:', threadId);
       await send(text, threadId);
       // No need to refresh - real-time subscriptions handle updates
     }
