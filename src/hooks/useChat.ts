@@ -173,6 +173,9 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
       mode,
       depthMode: selectedDepthMode,
       conversationSummary,
+      userId: user?.id,
+      userEmail: user?.email,
+      threadId: threadId || undefined,
       onToken: (token: string) => {
         reply.content += token;
         setMessages([...newMessages, { ...reply }]);

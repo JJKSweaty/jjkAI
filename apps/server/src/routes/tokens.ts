@@ -23,6 +23,8 @@ export async function registerTokenRoutes(app: FastifyInstance) {
     try {
       const { from, to, model, user } = req.query;
 
+      console.log(`[Summary] Query params:`, { from, to, model, user });
+
       let query = supabase
         .from('usage_events')
         .select('*')
@@ -36,6 +38,8 @@ export async function registerTokenRoutes(app: FastifyInstance) {
       const { data, error } = await query;
 
       if (error) throw error;
+
+      console.log(`[Summary] Found ${data?.length || 0} events, unique users: ${new Set(data?.map(e => e.user_id)).size}`);
 
       const total_input = data?.reduce((sum, e) => sum + (e.input_tokens || 0), 0) || 0;
       const total_output = data?.reduce((sum, e) => sum + (e.output_tokens || 0), 0) || 0;
@@ -141,6 +145,9 @@ export async function registerTokenRoutes(app: FastifyInstance) {
 
       if (error) throw error;
 
+      console.log(`[By User] Found ${data?.length || 0} usage events`);
+      console.log(`[By User] Unique users:`, new Set(data?.map(e => e.user_id)).size);
+
       // Group by user
       const userMap = new Map<string, any>();
 
@@ -168,6 +175,8 @@ export async function registerTokenRoutes(app: FastifyInstance) {
       const rows = Array.from(userMap.values())
         .sort((a, b) => (b.input + b.output + b.reasoning) - (a.input + a.output + a.reasoning))
         .slice(0, parseInt(limit));
+
+      console.log(`[By User] Returning ${rows.length} users`);
 
       return reply.send({ rows });
     } catch (error) {
@@ -245,6 +254,10 @@ export async function registerTokenRoutes(app: FastifyInstance) {
 
       if (error) throw error;
 
+      console.log(`[Leaderboard] Found ${data?.length || 0} usage events`);
+      console.log(`[Leaderboard] Unique users:`, new Set(data?.map(e => e.user_id)).size);
+      console.log(`[Leaderboard] Sample user IDs:`, [...new Set(data?.slice(0, 5).map(e => e.user_id))]);
+
       // Group by user
       const userMap = new Map<string, any>();
 
@@ -272,6 +285,8 @@ export async function registerTokenRoutes(app: FastifyInstance) {
         })
         .slice(0, 20)
         .map((row, index) => ({ ...row, rank: index + 1 }));
+
+      console.log(`[Leaderboard] Returning ${rows.length} users in leaderboard`);
 
       return reply.send({ rows });
     } catch (error) {

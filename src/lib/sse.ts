@@ -4,6 +4,9 @@ import { DepthMode, ConversationSummary } from './tokenOptimization';
 interface EnhancedChatStreamOptions extends ChatStreamOptions {
   depthMode?: DepthMode;
   conversationSummary?: ConversationSummary | null;
+  userId?: string;
+  userEmail?: string;
+  threadId?: string;
   onContinuationPrompt?: (data: { message: string; cost: number; continuationCount: number }) => void;
 }
 
@@ -13,6 +16,9 @@ export async function streamChat({
   mode, 
   depthMode = 'Standard',
   conversationSummary,
+  userId,
+  userEmail,
+  threadId,
   onToken, 
   onDone, 
   onError,
@@ -30,7 +36,10 @@ export async function streamChat({
         messages, 
         mode, 
         depthMode,
-        conversationSummary 
+        conversationSummary,
+        userId,
+        userEmail,
+        threadId
       }),
     });
 

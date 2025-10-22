@@ -319,8 +319,8 @@ export async function registerChatRoutes(app: FastifyInstance) {
           // Log usage to database for analytics
           const requestStartTime = Date.now();
           logUsage({
-            user_id: body.threadId || 'anonymous',
-            user_display: body.threadId || 'Anonymous User',
+            user_id: body.userId || body.threadId || 'anonymous',
+            user_display: body.userEmail || body.threadId || 'Anonymous User',
             thread_id: body.threadId,
             session_id: body.threadId,
             model: finalModel,

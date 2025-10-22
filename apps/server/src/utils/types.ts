@@ -9,6 +9,8 @@ export interface ChatRequest {
   mode?: 'auto' | 'manual';
   threadId?: string;
   depthMode?: 'Quick' | 'Standard' | 'DeepDive';
+  userId?: string;
+  userEmail?: string;
 }
 
 export interface StreamEvent {
