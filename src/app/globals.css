@@ -6,6 +6,8 @@
 
 @layer base {
   :root {
+    --radius: 14px;
+    --chat-max-ch: 74;
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -286,4 +288,27 @@ code, pre {
   --sidebar-accent: 340 20% 82%;
   --sidebar-accent-foreground: 340 30% 18%;
   --sidebar-border: 340 15% 78%;
+}
+
+/* Selection color */
+::selection {
+  background: #0ea5e9;
+  color: white;
+}
+
+/* Fade in animation for messages */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 220ms ease-out;
+  will-change: transform;
 }

@@ -52,7 +52,9 @@ export default function AuthPage() {
     <div className="fixed inset-0 flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
       <Card className="w-full max-w-md z-10">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Welcome to JJK.AI</CardTitle>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+            Welcome to JJK.AI
+          </CardTitle>
           <CardDescription>
             Sign in to continue
           </CardDescription>

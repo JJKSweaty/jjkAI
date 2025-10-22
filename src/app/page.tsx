@@ -99,7 +99,7 @@ export default function Page() {
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <SidebarTrigger />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 via-green-500 to-green-600 bg-clip-text text-transparent animate-glow hover:scale-110 transition-transform cursor-pointer">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent animate-glow hover:scale-110 transition-transform cursor-pointer">
               JJK.AI
             </h1>
             <ModelSwitcher 

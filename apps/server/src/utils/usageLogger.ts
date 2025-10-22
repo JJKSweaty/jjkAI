@@ -27,6 +27,10 @@ const PRICE_MAP: Record<string, { input: number; output: number; reasoning: numb
   'claude-3-5-sonnet-latest': { input: 0.003, output: 0.015, reasoning: 0 },
   'claude-3-5-haiku-latest': { input: 0.001, output: 0.005, reasoning: 0 },
   'claude-opus-4-20250514': { input: 0.015, output: 0.075, reasoning: 0 },
+  'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015, reasoning: 0 },
+  'claude-opus-4-1-20250805': { input: 0.015, output: 0.075, reasoning: 0 },
+  'claude-3-7-sonnet-20250219': { input: 0.003, output: 0.015, reasoning: 0 },
+  'claude-haiku-4-5-20251001': { input: 0.0008, output: 0.004, reasoning: 0 },
 };
 
 function computeCost(model: string, usage: { input: number; output: number; reasoning?: number }): number {

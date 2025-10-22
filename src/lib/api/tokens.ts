@@ -1,5 +1,7 @@
 // Token analytics API client
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8787';
+
 export interface PeriodParams {
   from: string;
   to: string;
@@ -70,7 +72,7 @@ const periodParams = (p: PeriodParams) => {
 };
 
 export async function getSummary(p: PeriodParams): Promise<SummaryData> {
-  const res = await fetch(`/api/tokens/summary?${periodParams(p)}`, {
+  const res = await fetch(`${API_BASE}/api/tokens/summary?${periodParams(p)}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch summary');
@@ -82,7 +84,7 @@ export async function getTimeseries(
   interval: 'hour' | 'day' = 'day'
 ): Promise<{ points: TimeseriesPoint[] }> {
   const params = periodParams(p);
-  const res = await fetch(`/api/tokens/timeseries?${params}&interval=${interval}`, {
+  const res = await fetch(`${API_BASE}/api/tokens/timeseries?${params}&interval=${interval}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch timeseries');
@@ -92,7 +94,7 @@ export async function getTimeseries(
 export async function getByUser(
   p: PeriodParams
 ): Promise<{ rows: UserRow[]; nextCursor?: string }> {
-  const res = await fetch(`/api/tokens/by-user?${periodParams(p)}`, {
+  const res = await fetch(`${API_BASE}/api/tokens/by-user?${periodParams(p)}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch user data');
@@ -102,7 +104,7 @@ export async function getByUser(
 export async function getByModel(
   p: PeriodParams
 ): Promise<{ rows: ModelRow[]; nextCursor?: string }> {
-  const res = await fetch(`/api/tokens/by-model?${periodParams(p)}`, {
+  const res = await fetch(`${API_BASE}/api/tokens/by-model?${periodParams(p)}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch model data');
@@ -114,7 +116,7 @@ export async function getLeaderboard(
   metric: 'tokens' | 'cost' = 'tokens'
 ): Promise<{ rows: LeaderboardRow[] }> {
   const params = periodParams(p);
-  const res = await fetch(`/api/tokens/leaderboard?${params}&metric=${metric}`, {
+  const res = await fetch(`${API_BASE}/api/tokens/leaderboard?${params}&metric=${metric}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch leaderboard');
@@ -122,7 +124,7 @@ export async function getLeaderboard(
 }
 
 export async function exportCSV(p: PeriodParams): Promise<Blob> {
-  const res = await fetch(`/api/tokens/export.csv?${periodParams(p)}`, {
+  const res = await fetch(`${API_BASE}/api/tokens/export.csv?${periodParams(p)}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to export CSV');

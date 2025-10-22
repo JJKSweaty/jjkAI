@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import hljs from 'highlight.js/lib/core';
-import { Button } from './button';
-import { Check, Copy } from 'lucide-react';
+import { CopyButton } from './copy-button';
 
 // Import common languages
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -45,7 +44,6 @@ interface CodeBlockProps {
 
 export function CodeBlock({ code, language, className }: CodeBlockProps) {
   const codeRef = useRef<HTMLElement>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (codeRef.current) {
@@ -57,39 +55,16 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
     }
   }, [code, language]);
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
-    <div className={`relative group ${className || ''}`}>
-      <div className="flex items-center justify-between px-4 py-2 bg-[#2d2a2e] border-b border-[#403e41]">
-        <span className="text-xs font-mono text-[#fcfcfa]">
+    <div className={`relative group my-4 ${className || ''}`}>
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border border-zinc-800 border-b-0 rounded-t-xl">
+        <span className="text-xs font-mono text-zinc-400">
           {language || 'code'}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity text-[#fcfcfa] hover:bg-[#403e41]"
-          onClick={handleCopy}
-        >
-          {copied ? (
-            <>
-              <Check className="h-3 w-3 mr-1" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="h-3 w-3 mr-1" />
-              Copy
-            </>
-          )}
-        </Button>
+        <CopyButton text={code} />
       </div>
-      <pre className="overflow-x-auto p-4 bg-[#2d2a2e] monokai-theme">
-        <code ref={codeRef} className={`language-${language || 'plaintext'} text-[#fcfcfa]`}>
+      <pre className="overflow-x-auto p-4 bg-zinc-950 border border-zinc-800 rounded-b-xl">
+        <code ref={codeRef} className={`language-${language || 'plaintext'} text-zinc-100 text-sm`}>
           {code}
         </code>
       </pre>
