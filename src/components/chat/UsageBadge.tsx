@@ -29,19 +29,19 @@ export function UsageBadge({ tokens = 0, cost = 0 }: UsageBadgeProps) {
         <TooltipTrigger asChild>
           <div 
             onClick={handleClick}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-all hover:scale-105 active:scale-95"
           >
-            <Activity className="h-4 w-4 text-primary" />
-            <div className="flex items-center gap-2 text-sm">
+            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <span className="font-medium text-foreground">
                 {formatTokens(tokens)}
               </span>
-              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground hidden sm:inline">•</span>
               <span className="font-medium text-primary">
                 {formatCost(cost)}
               </span>
             </div>
-            <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+            <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground hidden sm:inline" />
           </div>
         </TooltipTrigger>
         <TooltipContent>

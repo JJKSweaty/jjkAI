@@ -343,7 +343,7 @@ export function EnhancedComposer({
               )}>
                 
                 {/* Left side icons - aligned to top */}
-                <div className="flex items-start gap-2 flex-shrink-0 pt-1">
+                <div className="flex items-start gap-1 sm:gap-2 flex-shrink-0 pt-1">
                   {/* Hidden file input */}
                   <input
                     ref={fileInputRef}
@@ -362,14 +362,14 @@ export function EnhancedComposer({
                         size="icon"
                         onClick={() => fileInputRef.current?.click()}
                         className={cn(
-                          'h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors',
+                          'h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors',
                           hasThread ? 'text-sm' : '',
                           attachedFiles.length > 0 && 'text-primary'
                         )}
                       >
-                        <Paperclip className="h-4 w-4" />
+                        <Paperclip className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         {attachedFiles.length > 0 && (
-                          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-primary text-[9px] sm:text-[10px] text-primary-foreground flex items-center justify-center">
                             {attachedFiles.length}
                           </span>
                         )}
@@ -380,24 +380,28 @@ export function EnhancedComposer({
                     </TooltipContent>
                   </Tooltip>
 
-                  {/* Depth Mode Selector - Always visible */}
+                  {/* Depth Mode Selector - Hidden on small screens, visible on medium+ */}
                   {onDepthModeChange && (
-                    <DepthModeSelector 
-                      value={depthMode}
-                      onChange={onDepthModeChange}
-                      disabled={disabled}
-                      compact
-                    />
+                    <div className="hidden sm:block">
+                      <DepthModeSelector 
+                        value={depthMode}
+                        onChange={onDepthModeChange}
+                        disabled={disabled}
+                        compact
+                      />
+                    </div>
                   )}
 
-                  {/* Token Budget Display */}
+                  {/* Token Budget Display - Hidden on mobile */}
                   {tokenBudget && (
-                    <TokenBudgetDisplay
-                      mode={depthMode}
-                      estimatedInput={tokenBudget.estimatedInput}
-                      maxOutput={tokenBudget.maxOutput}
-                      used={tokenBudget.used}
-                    />
+                    <div className="hidden md:block">
+                      <TokenBudgetDisplay
+                        mode={depthMode}
+                        estimatedInput={tokenBudget.estimatedInput}
+                        maxOutput={tokenBudget.maxOutput}
+                        used={tokenBudget.used}
+                      />
+                    </div>
                   )}
 
                   {/* Model selector (compact mode) OR Context button (expanded mode) */}
@@ -509,8 +513,8 @@ export function EnhancedComposer({
                       'resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0',
                       'placeholder:text-muted-foreground/75',
                       'transition-all duration-150 ease-out',
-                      // Font sizing
-                      hasThread ? 'text-[15px]' : 'text-base',
+                      // Font sizing - slightly smaller on mobile
+                      hasThread ? 'text-sm sm:text-[15px]' : 'text-[15px] sm:text-base',
                       // Scrollbar styling - sleek and modern
                       'scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent'
                     )}
@@ -520,8 +524,8 @@ export function EnhancedComposer({
                     style={{
                       resize: 'none',
                       lineHeight: '1.5',
-                      padding: '8px 0',
-                      minHeight: hasThread ? '36px' : '40px',
+                      padding: '6px 0',
+                      minHeight: hasThread ? '32px' : '36px',
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -533,7 +537,7 @@ export function EnhancedComposer({
                 </div>
 
                 {/* Send button - positioned at top to align with first line */}
-                <div className="flex-shrink-0 pt-1">
+                <div className="flex-shrink-0 pt-0.5 sm:pt-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -544,8 +548,8 @@ export function EnhancedComposer({
                           'rounded-full shadow-md transition-all duration-200 flex-shrink-0 relative',
                           'bg-primary hover:bg-primary/90 text-primary-foreground',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
-                          // Claude-style circular button sizing
-                          hasThread ? 'h-8 w-8' : 'h-9 w-9',
+                          // Claude-style circular button sizing - smaller on mobile
+                          hasThread ? 'h-7 w-7 sm:h-8 sm:w-8' : 'h-8 w-8 sm:h-9 sm:w-9',
                           !disabled && (text.trim() || attachedFiles.length > 0) && 'hover:shadow-lg hover:scale-105 hover:brightness-105'
                         )}
                         aria-label="Send message"

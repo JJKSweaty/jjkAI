@@ -23,22 +23,23 @@ export function ModelSwitcher({ currentModel, onModelChange, disabled }: ModelSw
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" disabled={disabled} className="gap-2">
-          {selectedModel.name}
-          <ChevronDown className="h-4 w-4" />
+        <Button variant="outline" disabled={disabled} className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3">
+          <span className="hidden sm:inline">{selectedModel.name}</span>
+          <span className="sm:hidden">{selectedModel.name.split(' ')[1]}</span>
+          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Select Model</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-56 sm:w-64">
+        <DropdownMenuLabel className="text-sm">Select Model</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {MODELS.map((model) => (
           <DropdownMenuItem
             key={model.id}
             onClick={() => onModelChange(model.id)}
-            className="flex flex-col items-start"
+            className="flex flex-col items-start py-3 sm:py-2"
           >
-            <div className="font-medium">{model.name}</div>
-            <div className="text-xs text-muted-foreground">{model.description}</div>
+            <div className="font-medium text-sm">{model.name}</div>
+            <div className="text-xs text-muted-foreground line-clamp-1">{model.description}</div>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

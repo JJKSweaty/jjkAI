@@ -96,20 +96,24 @@ export default function Page() {
       <SidebarInset>
         {/* Header */}
         <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <SidebarTrigger />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent animate-glow hover:scale-110 transition-transform cursor-pointer">
+        <div className="flex h-14 items-center justify-between px-2 sm:px-4 gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <SidebarTrigger className="shrink-0" />
+            <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent animate-glow hover:scale-110 transition-transform cursor-pointer whitespace-nowrap">
               JJK.AI
             </h1>
-            <ModelSwitcher 
-              currentModel={model} 
-              onModelChange={setModel}
-              disabled={streaming}
-            />
+            <div className="hidden md:block">
+              <ModelSwitcher 
+                currentModel={model} 
+                onModelChange={setModel}
+                disabled={streaming}
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <UsageBadge tokens={usage.tokens} cost={usage.cost} />
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="hidden sm:block">
+              <UsageBadge tokens={usage.tokens} cost={usage.cost} />
+            </div>
             <ThemeToggle />
           </div>
         </div>
@@ -118,8 +122,8 @@ export default function Page() {
       {/* Chat Area */}
       {messages.length === 0 ? (
         /* Centered composer when empty */
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-4xl px-4">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl">
             <EnhancedComposer 
               onSend={handleSend} 
               disabled={streaming} 

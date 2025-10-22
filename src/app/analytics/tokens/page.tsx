@@ -113,16 +113,18 @@ export default function TokenAnalyticsPage() {
     <div className="min-h-screen bg-background w-full">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="w-full px-6 py-5">
+        <div className="w-full px-3 sm:px-6 py-3 sm:py-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to JJK-AI
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="h-9 sm:h-8">
+                <ArrowLeft className="mr-1 sm:mr-2 h-4 w-4" /> 
+                <span className="hidden sm:inline">Back to JJK-AI</span>
+                <span className="sm:hidden">Back</span>
               </Button>
-              <div className="h-6 w-px bg-border" />
+              <div className="h-6 w-px bg-border hidden sm:block" />
               <div>
                 <div className="text-xs text-muted-foreground">Analytics</div>
-                <h1 className="text-2xl font-semibold">Token Usage</h1>
+                <h1 className="text-lg sm:text-2xl font-semibold">Token Usage</h1>
               </div>
             </div>
           </div>
@@ -130,7 +132,7 @@ export default function TokenAnalyticsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="w-full px-6 py-6 space-y-6 max-w-[1800px] mx-auto">
+      <div className="w-full px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-[1800px] mx-auto">
         {/* Filters */}
         <FiltersBar
           onDateRangeChange={handleDateRangeChange}
@@ -148,15 +150,15 @@ export default function TokenAnalyticsPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="models">Models</TabsTrigger>
+          <TabsList className="mb-4 sm:mb-6 w-full sm:w-auto grid grid-cols-2 sm:inline-grid">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm">Leaderboard</TabsTrigger>
+            <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
+            <TabsTrigger value="models" className="text-xs sm:text-sm">Models</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <Leaderboard rows={leaderboard.slice(0, 5)} isLoading={isLoading} />
               <ModelsTable rows={models} isLoading={isLoading} />
             </div>

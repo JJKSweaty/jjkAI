@@ -69,8 +69,8 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
   }
 
   return (
-    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth">
-      <div className="p-6 space-y-4 pb-32 max-w-4xl mx-auto">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth overscroll-contain">
+      <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 pb-24 sm:pb-32 max-w-4xl mx-auto">
         {messages.map((message, index) => {
           const isStreaming = index === messages.length - 1 && message.role === 'assistant' && !message.content;
           

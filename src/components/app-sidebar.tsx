@@ -111,8 +111,8 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
     >
       {/* Header: JJK.AI branding */}
       <SidebarHeader>
-        <div className="px-4 py-3 flex items-center justify-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-data-[collapsible=icon]:text-base">
+        <div className="px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-center">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-data-[collapsible=icon]:text-base">
             <span className="group-data-[collapsible=icon]:hidden">JJK.AI</span>
             <span className="hidden group-data-[collapsible=icon]:inline">JJK</span>
           </h1>
@@ -148,8 +148,8 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleNewChat}>
-                  <Plus />
+                <SidebarMenuButton onClick={handleNewChat} className="min-h-[44px]">
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>New Chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -163,18 +163,18 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
           <SidebarGroupContent>
             <SidebarMenu>
               {threadsLoading ? null : threads.length === 0 ? (
-                <div className="px-4 py-2 text-sm text-muted-foreground">No chats yet</div>
+                <div className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-muted-foreground">No chats yet</div>
               ) : (
                 threads.slice(0, 10).map((thread) => (
                   <SidebarMenuItem key={thread.id}>
-                    <div className="group flex items-center gap-1 w-full">
+                    <div className="group flex items-center gap-1 w-full min-h-[44px]">
                       {editingId === thread.id ? (
                         /* Editing mode */
-                        <div className="flex items-center gap-1 flex-1 px-2">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-1 px-2">
                           <Input
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="h-8 text-sm"
+                            className="h-9 sm:h-8 text-sm"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') saveEdit(e as any, thread.id);
@@ -183,17 +183,17 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
                           />
                           <button
                             onClick={(e) => saveEdit(e, thread.id)}
-                            className="p-1 hover:bg-primary/10 rounded"
+                            className="p-2 sm:p-1 hover:bg-primary/10 rounded min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                             title="Save"
                           >
-                            <Check className="h-3 w-3 text-primary" />
+                            <Check className="h-4 w-4 sm:h-3 sm:w-3 text-primary" />
                           </button>
                           <button
                             onClick={cancelEdit}
-                            className="p-1 hover:bg-destructive/10 rounded"
+                            className="p-2 sm:p-1 hover:bg-destructive/10 rounded min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                             title="Cancel"
                           >
-                            <X className="h-3 w-3 text-destructive" />
+                            <X className="h-4 w-4 sm:h-3 sm:w-3 text-destructive" />
                           </button>
                         </div>
                       ) : (
@@ -202,24 +202,24 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
                           <SidebarMenuButton 
                             onClick={() => handleThreadClick(thread.id)}
                             isActive={currentThreadId === thread.id}
-                            className="flex-1"
+                            className="flex-1 min-h-[44px]"
                           >
-                            <MessageSquare className="h-4 w-4" />
-                            <span className="truncate">{thread.title || 'New Chat'}</span>
+                            <MessageSquare className="h-4 w-4 sm:h-4 sm:w-4" />
+                            <span className="truncate text-sm">{thread.title || 'New Chat'}</span>
                           </SidebarMenuButton>
                           <button
                             onClick={(e) => startEditing(e, thread.id, thread.title || 'New Chat')}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 sm:opacity-0 p-2 sm:p-1 hover:bg-primary/10 rounded transition-opacity min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center touch-manipulation"
                             title="Edit name"
                           >
-                            <Pencil className="h-3 w-3" />
+                            <Pencil className="h-4 w-4 sm:h-3 sm:w-3" />
                           </button>
                           <button
                             onClick={(e) => handleDeleteThread(e, thread.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 sm:opacity-0 p-2 sm:p-1 hover:bg-destructive/10 rounded transition-opacity min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center touch-manipulation"
                             title="Delete chat"
                           >
-                            <LogOut className="h-3 w-3 text-destructive" />
+                            <LogOut className="h-4 w-4 sm:h-3 sm:w-3 text-destructive" />
                           </button>
                         </>
                       )}
@@ -238,27 +238,27 @@ export function AppSidebar({ onNewChat, onThreadSelect, currentThreadId }: AppSi
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <Avatar className="h-5 w-5">
+                <SidebarMenuButton className="min-h-[44px]">
+                  <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
                     <AvatarFallback className="bg-red-600 text-white text-xs">
                       {user?.email?.substring(0, 2).toUpperCase() || 'JK'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate">{user?.email || 'User'}</span>
-                  <ChevronUp className="ml-auto" />
+                  <span className="truncate text-sm">{user?.email || 'User'}</span>
+                  <ChevronUp className="ml-auto h-4 w-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="top"
                 className="w-[--radix-popper-anchor-width]"
               >
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild className="min-h-[44px] text-sm">
                   <Link href="/settings">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={() => signOut()} className="min-h-[44px] text-sm">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>

@@ -13,6 +13,12 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mon
 export const metadata: Metadata = {
   title: 'JJK.AI',
   description: 'Chat with Claude AI models',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

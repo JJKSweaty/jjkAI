@@ -45,11 +45,11 @@ export function FiltersBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 pb-6">
+    <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4 pb-4 sm:pb-6">
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
         <Select value={preset} onValueChange={handlePresetChange}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px] h-10 sm:h-9">
             <SelectValue placeholder="Time range" />
           </SelectTrigger>
           <SelectContent>
@@ -61,7 +61,7 @@ export function FiltersBar({
       </div>
 
       <Select onValueChange={onModelChange}>
-        <SelectTrigger className="w-[200px]">
+        <SelectTrigger className="w-full sm:w-[200px] h-10 sm:h-9">
           <SelectValue placeholder="All models" />
         </SelectTrigger>
         <SelectContent>
@@ -74,12 +74,13 @@ export function FiltersBar({
         </SelectContent>
       </Select>
 
-      <div className="ml-auto flex gap-2">
-        <Button variant="outline" size="sm" onClick={onRefresh}>
+      <div className="sm:ml-auto flex gap-2">
+        <Button variant="outline" size="sm" onClick={onRefresh} className="flex-1 sm:flex-none h-10 sm:h-9">
           Refresh
         </Button>
-        <Button variant="outline" size="sm" onClick={onExport}>
-          Export CSV
+        <Button variant="outline" size="sm" onClick={onExport} className="flex-1 sm:flex-none h-10 sm:h-9">
+          <span className="hidden sm:inline">Export CSV</span>
+          <span className="sm:hidden">Export</span>
         </Button>
       </div>
     </div>

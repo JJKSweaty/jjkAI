@@ -81,41 +81,43 @@ export function Leaderboard({ rows = [], metric = 'tokens', isLoading }: Leaderb
   }
 
   return (
-    <Card className="rounded-2xl">
-      <CardHeader>
-        <CardTitle>
+    <Card className="rounded-xl sm:rounded-2xl">
+      <CardHeader className="px-4 sm:px-6 py-4 sm:py-6">
+        <CardTitle className="text-base sm:text-lg">
           Leaderboard - Top {metric === 'tokens' ? 'Token Users' : 'Cost Contributors'}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-20">Rank</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead className="text-right">Tokens</TableHead>
-              <TableHead className="text-right">Cost (USD)</TableHead>
-              <TableHead className="text-right">Requests</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.user_id} className="text-sm">
-                <TableCell>{getRankBadge(row.rank)}</TableCell>
-                <TableCell className="font-medium">{row.user_display}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.tokens.toLocaleString()}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  ${row.cost_usd.toFixed(2)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.requests.toLocaleString()}
-                </TableCell>
+      <CardContent className="px-0 sm:px-6 pb-4 sm:pb-6">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16 sm:w-20 text-xs sm:text-sm">Rank</TableHead>
+                <TableHead className="text-xs sm:text-sm">User</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm">Tokens</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm hidden sm:table-cell">Cost (USD)</TableHead>
+                <TableHead className="text-right text-xs sm:text-sm">Reqs</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.user_id} className="text-xs sm:text-sm">
+                  <TableCell>{getRankBadge(row.rank)}</TableCell>
+                  <TableCell className="font-medium">{row.user_display}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.tokens.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums hidden sm:table-cell">
+                    ${row.cost_usd.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.requests.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

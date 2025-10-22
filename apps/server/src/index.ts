@@ -1,8 +1,10 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyMultipart from '@fastify/multipart';
 import dotenv from 'dotenv';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerTokenRoutes } from './routes/tokens.js';
+import { documentRoutes } from './routes/documents.js';
 
 dotenv.config();
 
@@ -31,9 +33,18 @@ await app.register(cors, {
   credentials: true,
 });
 
+// Enable multipart for file uploads
+await app.register(fastifyMultipart, {
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max file size
+    files: 1, // One file at a time
+  },
+});
+
 // Register routes
 registerChatRoutes(app);
 registerTokenRoutes(app);
+await app.register(documentRoutes, { prefix: '/api/documents' });
 
 const port = Number(process.env.PORT || 8080);
 const host = '0.0.0.0';

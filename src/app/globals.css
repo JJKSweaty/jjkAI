@@ -312,3 +312,35 @@ code, pre {
   animation: fadeIn 220ms ease-out;
   will-change: transform;
 }
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Prevent zoom on input focus on iOS */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Smooth scrolling on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better tap targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Better touch feedback */
+@media (hover: none) {
+  button:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+}

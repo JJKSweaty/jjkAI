@@ -28,18 +28,18 @@ export function KpiCard({ title, value, sub, chips = [], isLoading }: KpiCardPro
   }
 
   return (
-    <Card className="rounded-2xl">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
+    <Card className="rounded-xl sm:rounded-2xl">
+      <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
+        <CardTitle className="text-xs sm:text-sm text-muted-foreground">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex items-end justify-between">
+      <CardContent className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6">
         <div>
-          <div className="text-3xl font-semibold">{value}</div>
+          <div className="text-2xl sm:text-3xl font-semibold">{value}</div>
           {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-start sm:justify-end">
           {chips.map((c, idx) => (
-            <Badge key={idx} variant="secondary" className="text-xs">
+            <Badge key={idx} variant="secondary" className="text-[10px] sm:text-xs px-2 py-0.5">
               {c.label}: {c.value}
             </Badge>
           ))}
@@ -64,7 +64,7 @@ interface KpiCardsProps {
 
 export function KpiCards({ summary, isLoading }: KpiCardsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
       <KpiCard
         title="Total Cost"
         value={summary ? `$${summary.total_cost_usd.toFixed(2)}` : '$0.00'}
