@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerTokenRoutes } from './routes/tokens.js';
 import { documentRoutes } from './routes/documents.js';
+import { ragChatRoutes } from './routes/ragChat.js';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ await app.register(fastifyMultipart, {
 registerChatRoutes(app);
 registerTokenRoutes(app);
 await app.register(documentRoutes, { prefix: '/api/documents' });
+await app.register(ragChatRoutes, { prefix: '/api/chat' });
 
 const port = Number(process.env.PORT || 8080);
 const host = '0.0.0.0';
