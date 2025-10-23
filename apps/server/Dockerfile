@@ -1,5 +1,5 @@
 # Use Node.js 20 LTS (Debian-based for onnxruntime compatibility)
-FROM node:20-slim AS base
+FROM node:20-bookworm-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -19,19 +19,26 @@ COPY . .
 RUN npm run build
 
 # Production image, copy all the files and run the app
-FROM base AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install system libraries required by onnxruntime-node
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libc6 \
+    libstdc++6 \
+    libgomp1 \
+  && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 fastify
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs fastify
 
 # Copy built application
 COPY --from=builder --chown=fastify:nodejs /app/dist ./dist
-COPY --from=builder --chown=fastify:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=fastify:nodejs /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 USER fastify
 
