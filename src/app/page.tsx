@@ -244,7 +244,7 @@ export default function Page() {
                   
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 text-left">
                     <p className="font-medium text-foreground mb-2">⚠️ Current models:</p>
-                    <p className="text-xs">Your current Claude models don't provide reasoning data - they give direct responses only.</p>
+                    <p className="text-xs">Your current Claude models don&apos;t provide reasoning data - they give direct responses only.</p>
                   </div>
                   
                   <p className="text-xs">Start a conversation to see the reasoning components in action when using compatible models!</p>

@@ -64,16 +64,20 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
 
   // Initialize optimizers
   const tokenManager = new TokenManager(model);
-  const conversationOptimizer = new ConversationOptimizer();
+  // Keep a stable conversation optimizer instance so effects don't re-run unnecessarily
+  const conversationOptimizerRef = useRef<ConversationOptimizer | null>(null);
+  if (!conversationOptimizerRef.current) {
+    conversationOptimizerRef.current = new ConversationOptimizer();
+  }
 
   // Update conversation summary when messages change
   useEffect(() => {
     if (messages.length > 8) {
-      conversationOptimizer.createRollingSummary(messages).then(summary => {
+      conversationOptimizerRef.current!.createRollingSummary(messages).then((summary) => {
         setConversationSummary(summary);
       });
     }
-  }, [messages.length]);
+  }, [messages]);
 
   // Auto-detect depth mode based on user message
   const detectDepthMode = (message: string): DepthMode => {
@@ -81,16 +85,12 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
   };
 
   // Load total usage when component mounts or user changes
-  useEffect(() => {
-    if (user) {
-      loadTotalUsage();
-    } else {
-      // Reset usage when user logs out
-      setUsage({ tokens: 0, cost: 0 });
-    }
-  }, [user]);
+  // useCallback provides a stable reference for the effect dependency
+  const loadTotalUsage = useRef<() => Promise<void>>();
 
-  const loadTotalUsage = async () => {
+  // Define function with stable reference using useRef to avoid re-creating the function
+  // but avoid assigning directly to a read-only current by using a local callback wrapper
+  const _loadTotalUsage = async () => {
     if (!user) return;
 
     try {
@@ -104,14 +104,27 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
         return;
       }
 
-      const totalTokens = data.reduce((sum, usage) => sum + usage.input_tokens + usage.output_tokens, 0);
-      const totalCost = data.reduce((sum, usage) => sum + usage.cost, 0);
+      const totalTokens = (data || []).reduce((sum: number, usage: any) => sum + (usage.input_tokens || 0) + (usage.output_tokens || 0), 0);
+      const totalCost = (data || []).reduce((sum: number, usage: any) => sum + (usage.cost || 0), 0);
 
       setUsage({ tokens: totalTokens, cost: totalCost });
     } catch (error) {
       console.error('Error loading usage:', error);
     }
   };
+
+  // Keep a stable ref to the function so effects can call it without adding it to deps
+  loadTotalUsage.current = _loadTotalUsage;
+
+  useEffect(() => {
+    if (user) {
+      // Call the stable function if present
+      loadTotalUsage.current?.();
+    } else {
+      // Reset usage when user logs out
+      setUsage({ tokens: 0, cost: 0 });
+    }
+  }, [user]);
 
   const saveUsage = async (inputTokens: number, outputTokens: number, cost: number, activeThreadId?: string) => {
     if (!user) return;

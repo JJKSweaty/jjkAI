@@ -24,7 +24,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     const tempId = Math.random().toString(36).substring(7);
     const newDoc: UploadedDocument = {
       id: tempId,
@@ -83,7 +83,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
         )
       );
     }
-  };
+  }, [onUploadComplete]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -101,7 +101,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
         uploadFile(file);
       }
     });
-  }, []);
+  }, [uploadFile]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

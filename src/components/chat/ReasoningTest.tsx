@@ -75,7 +75,7 @@ The implementation should use RS256 for asymmetric signing so multiple services 
           <ul className="list-disc ml-4 space-y-1">
             <li>Reasoning section appears above the main response</li>
             <li>Brain icon indicates AI thinking process</li>
-            <li>"Thought for 12 seconds" shows effort invested</li>
+            <li>Thought for 12 seconds shows effort invested</li>
             <li>Step-by-step analysis is collapsible</li>
             <li>Code blocks use theme-appropriate highlighting</li>
           </ul>
