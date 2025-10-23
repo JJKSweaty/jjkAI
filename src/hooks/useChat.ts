@@ -18,6 +18,7 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'claude-opus-4-1-20250805': { input: 15, output: 75 },
   'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
   'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
+  'claude-3-7-sonnet-20250219': { input: 3, output: 15 },
 };
 
 function calculateCost(model: string, inputTokens: number, outputTokens: number): number {

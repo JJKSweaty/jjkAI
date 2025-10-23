@@ -74,7 +74,7 @@ export async function chatRoutes(fastify: FastifyInstance) {
   // Token estimation endpoint
   fastify.post<{ Body: { text: string, model?: string } }>('/chat/estimate-tokens', async (request, reply) => {
     try {
-      const { text, model = 'claude-3-5-sonnet-latest' } = request.body;
+      const { text, model = 'claude-sonnet-4-5-20250929' } = request.body;
       // Simple estimation: ~1 token per 4 characters
       const estimated = Math.ceil(text.length / 4);
       

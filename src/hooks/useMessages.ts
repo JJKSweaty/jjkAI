@@ -82,7 +82,7 @@ export function useMessages(threadId: string | null) {
       const { data: claimedId, error: claimError } = await supabase.rpc('create_or_claim_thread', {
         p_id: activeThreadId,
         p_title: 'New chat',
-        p_model: 'claude-3-5-haiku-latest',
+        p_model: 'claude-haiku-4-5-20251001',
       });
 
       if (claimError) {

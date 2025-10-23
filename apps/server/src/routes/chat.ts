@@ -26,14 +26,14 @@ function extractKeywords(query: string): string[] {
 
 // Claude model pricing and capabilities
 const CLAUDE_MODELS = {
-  'claude-3-5-haiku-latest': { 
+  'claude-haiku-4-5-20251001': { 
     cost: 'low', 
     capability: 'basic',
     maxTokens: 8192,
     inputPrice: 0.8, // per million tokens
     outputPrice: 4
   },
-  'claude-3-5-sonnet-latest': { 
+  'claude-sonnet-4-5-20250929': { 
     cost: 'medium', 
     capability: 'advanced',
     maxTokens: 8192,
@@ -119,17 +119,17 @@ function classifyTask(message: string): TaskClass {
 function selectOptimalModel(taskClass: TaskClass, messageLength: number, depthMode?: string): string {
   // DeepDive mode ALWAYS uses Sonnet for maximum quality
   if (depthMode === 'DeepDive') {
-    return 'claude-3-5-sonnet-latest';
+    return 'claude-sonnet-4-5-20250929';
   }
   
   // Sonnet ONLY for: large codegen, detailed analysis, or complex reasoning
   if (taskClass === 'codegen-large' || 
       (taskClass === 'detailed' && messageLength > 1000)) {
-    return 'claude-3-5-sonnet-latest';
+    return 'claude-sonnet-4-5-20250929';
   }
   
   // Everything else: Haiku (95%+ of requests)
-  return 'claude-3-5-haiku-latest';
+  return 'claude-haiku-4-5-20251001';
 }
 
 // Get optimal max_tokens based on task class (TIGHT CAPS)
@@ -236,7 +236,7 @@ export async function registerChatRoutes(app: FastifyInstance) {
         console.log(`🤖 Auto mode: Selected ${finalModel} for ${taskClass} task (DepthMode: ${body.depthMode || 'Standard'})`);
       } else {
         // Manual mode: Use the specified model
-        finalModel = body.model || 'claude-3-5-haiku-latest';
+        finalModel = body.model || 'claude-haiku-4-5-20251001';
         console.log(`⚙️  Manual mode: Using specified model ${finalModel}`);
       }
       
@@ -370,7 +370,7 @@ export async function registerChatRoutes(app: FastifyInstance) {
 
       try {
         const stream = anthropic.messages.stream({
-          model: finalModel || 'claude-3-5-haiku-latest',
+          model: finalModel || 'claude-haiku-4-5-20251001',
           max_tokens: maxTokens,
           temperature: 0.7,
           messages: optimizedMessages,
@@ -389,7 +389,7 @@ export async function registerChatRoutes(app: FastifyInstance) {
 
         // Handle completion
         stream.on('message', async (message) => {
-          const modelConfig = CLAUDE_MODELS[finalModel as keyof typeof CLAUDE_MODELS] || CLAUDE_MODELS['claude-3-5-haiku-latest'];
+          const modelConfig = CLAUDE_MODELS[finalModel as keyof typeof CLAUDE_MODELS] || CLAUDE_MODELS['claude-haiku-4-5-20251001'];
           const inputTokens = message.usage.input_tokens;
           const outputTokens = message.usage.output_tokens;
           const estimatedCost = (inputTokens * modelConfig.inputPrice + outputTokens * modelConfig.outputPrice) / 1000000;
@@ -430,10 +430,10 @@ export async function registerChatRoutes(app: FastifyInstance) {
           }
           
           // Cache the response for future use
-          promptCache.set(optimizedMessages, finalModel || 'claude-3-5-haiku-latest', fullResponse, {
+          promptCache.set(optimizedMessages, finalModel || 'claude-haiku-4-5-20251001', fullResponse, {
             inputTokens,
             outputTokens,
-            model: finalModel || 'claude-3-5-haiku-latest',
+            model: finalModel || 'claude-haiku-4-5-20251001',
             estimatedCost
           });
           
@@ -577,7 +577,7 @@ export async function registerChatRoutes(app: FastifyInstance) {
 
       const continuationResult = await autoContinuation.forceContinuation(
         {
-          model: body.model || 'claude-3-5-haiku-latest',
+          model: body.model || 'claude-haiku-4-5-20251001',
           max_tokens: body.maxTokens || 2048,
           temperature: 0.7,
         },

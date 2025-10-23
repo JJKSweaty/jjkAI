@@ -6,4 +6,4 @@ export const MODELS = [
   
 ] as const;
 
-export const DEFAULT_MODEL = process.env.NEXT_PUBLIC_DEFAULT_MODEL || 'claude-3-7-sonnet-20250219';
+export const DEFAULT_MODEL = process.env.NEXT_PUBLIC_DEFAULT_MODEL || 'claude-haiku-4-5-20251001';
