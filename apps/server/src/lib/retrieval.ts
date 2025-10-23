@@ -3,9 +3,9 @@
  * Supports keyword, vector, and hybrid search
  */
 
-import { supabase } from "./supabase";
+import { supabase } from "./supabase.js";
 import type { DocumentChunk, CitationSource } from "../types/documents.js";
-import { generateQueryEmbedding } from "./embeddings";
+import { generateQueryEmbedding } from "./embeddings.js";
 
 export interface SearchOptions {
   query: string;

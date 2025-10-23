@@ -1,5 +1,5 @@
-# Use Node.js 20 LTS
-FROM node:20-alpine AS base
+# Use Node.js 20 LTS (Debian-based for onnxruntime compatibility)
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
