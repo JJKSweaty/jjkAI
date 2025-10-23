@@ -1,7 +1,7 @@
 # fly.toml app configuration file generated for jjk-ai-server
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
-app = "jjk-ai-server"
+app = "jjkai"
 primary_region = "iad"
 
 [build]
@@ -20,33 +20,16 @@ primary_region = "iad"
   processes = ["app"]
 
 [[http_service.checks]]
-  grace_period = "10s"
+  grace_period = "20s"
   interval = "30s"
   method = "GET"
-  timeout = "5s"
+  timeout = "10s"
   path = "/health"
 
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory_mb = 256
-
-[deploy]
-  strategy = "rolling"
-
-[[services]]
-  protocol = "tcp"
-  internal_port = 8080
-  processes = ["app"]
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
+  memory_mb = 512
 
   [services.concurrency]
     type = "connections"
