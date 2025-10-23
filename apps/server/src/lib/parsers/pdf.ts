@@ -5,7 +5,7 @@
 
 import { v4 as uuid } from "uuid";
 import pdfParse from "pdf-parse";
-import type { UniversalDoc, DocumentBlock } from "../../types/documents";
+import type { UniversalDoc, DocumentBlock } from "../../types/documents.js";
 
 /**
  * Check if PDF is scanned (needs OCR)

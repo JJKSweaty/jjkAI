@@ -5,8 +5,8 @@
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import Anthropic from "@anthropic-ai/sdk";
-import { searchChunks, generateCitations, buildContext, formatCitation } from "../lib/retrieval";
-import type { CitationSource } from "../types/documents";
+import { searchChunks, generateCitations, buildContext, formatCitation } from "../lib/retrieval.js";
+import type { CitationSource } from "../types/documents.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,

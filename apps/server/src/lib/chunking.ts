@@ -4,7 +4,7 @@
  */
 
 import { v4 as uuid } from "uuid";
-import type { UniversalDoc, DocumentBlock, DocumentChunk } from "../types/documents";
+import type { UniversalDoc, DocumentBlock, DocumentChunk } from "../types/documents.js";
 
 const TARGET_CHUNK_SIZE = 300; // tokens
 const OVERLAP_SIZE = 50; // tokens (~10-15% overlap)

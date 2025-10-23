@@ -4,11 +4,11 @@
  */
 
 import { v4 as uuid } from "uuid";
-import type { UniversalDoc, ExtractionResult, FileDetectionResult } from "../types/documents";
-import { detectFile, isSupportedMimeType } from "./fileDetection";
-import { chunkDocument, chunkPlainText } from "./chunking";
-import { extractPDF } from "./parsers/pdf";
-import { extractDOCX } from "./parsers/docx";
+import type { UniversalDoc, ExtractionResult, FileDetectionResult } from "../types/documents.js";
+import { detectFile, isSupportedMimeType } from "./fileDetection.js";
+import { chunkDocument, chunkPlainText } from "./chunking.js";
+import { extractPDF } from "./parsers/pdf.js";
+import { extractDOCX } from "./parsers/docx.js";
 
 /**
  * Main extraction function - routes to appropriate parser

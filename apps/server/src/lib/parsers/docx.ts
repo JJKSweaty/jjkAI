@@ -5,7 +5,7 @@
 
 import mammoth from "mammoth";
 import { v4 as uuid } from "uuid";
-import type { UniversalDoc, DocumentBlock } from "../../types/documents";
+import type { UniversalDoc, DocumentBlock } from "../../types/documents.js";
 
 /**
  * Extract DOCX to UniversalDoc

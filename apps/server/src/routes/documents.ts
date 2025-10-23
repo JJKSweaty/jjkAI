@@ -4,9 +4,9 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { extractDocument } from "../lib/extraction";
-import { supabase } from "../lib/supabase";
-import type { ExtractionResult } from "../types/documents";
+import { extractDocument } from "../lib/extraction.js";
+import { supabase } from "../lib/supabase.js";
+import type { ExtractionResult } from "../types/documents.js";
 
 /**
  * Register document routes

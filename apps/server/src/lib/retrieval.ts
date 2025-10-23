@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "./supabase";
-import type { DocumentChunk, CitationSource } from "../types/documents";
+import type { DocumentChunk, CitationSource } from "../types/documents.js";
 import { generateQueryEmbedding } from "./embeddings";
 
 export interface SearchOptions {

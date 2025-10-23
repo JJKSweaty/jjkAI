@@ -5,7 +5,7 @@
 
 import { fileTypeFromBuffer } from "file-type";
 import crypto from "crypto";
-import type { FileDetectionResult } from "../types/documents";
+import type { FileDetectionResult } from "../types/documents.js";
 
 /**
  * Guess MIME type from file extension (fallback)
