@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for jjk-ai-server
+# fly.toml app configuration file generated for jjkai
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
 app = "jjkai"
@@ -30,23 +30,3 @@ primary_region = "iad"
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 512
-
-  [services.concurrency]
-    type = "connections"
-    hard_limit = 25
-    soft_limit = 20
-
-  [[services.tcp_checks]]
-    grace_period = "10s"
-    interval = "15s"
-    restart_limit = 0
-    timeout = "2s"
-
-  [[services.http_checks]]
-    interval = "30s"
-    grace_period = "10s"
-    method = "get"
-    path = "/health"
-    protocol = "http"
-    timeout = "5s"
-    tls_skip_verify = false
