@@ -13,6 +13,8 @@ import { SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
+import { BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function Page() {
   const { user, loading, signOut } = useAuth();
@@ -182,6 +184,15 @@ export default function Page() {
             <div className="hidden sm:block">
               <UsageBadge tokens={usage.tokens} cost={usage.cost} />
             </div>
+            {/* Mobile-only compact dashboard button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden h-9 w-9"
+              onClick={() => router.push('/analytics/tokens')}
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>
