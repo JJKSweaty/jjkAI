@@ -5,18 +5,19 @@ app = "jjkai"
 primary_region = "iad"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "./Dockerfile"
 
 [env]
   PORT = "8080"
   NODE_ENV = "production"
+  XENOVA_CACHE_DIR = "/tmp/xenova-cache"
 
 [http_service]
   internal_port = 8080
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
-  min_machines_running = 2
+  min_machines_running = 0
   processes = ["app"]
 
 [[http_service.checks]]

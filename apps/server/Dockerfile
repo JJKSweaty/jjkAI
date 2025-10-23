@@ -41,6 +41,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs fastify
 
+# Create cache directory for xenova transformers and give permissions
+RUN mkdir -p /tmp/xenova-cache && \
+    chown -R fastify:nodejs /tmp/xenova-cache
+
 # Copy built application
 COPY --from=builder --chown=fastify:nodejs /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
