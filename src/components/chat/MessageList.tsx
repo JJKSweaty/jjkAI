@@ -75,7 +75,11 @@ export function MessageList({ messages, streaming, threadId }: MessageListProps)
           const isStreaming = index === messages.length - 1 && message.role === 'assistant' && !message.content;
           
           return (
-            <ChatBubble key={index} role={message.role as 'user' | 'assistant' | 'system' | 'tool'}>
+            <ChatBubble 
+              key={index} 
+              role={message.role as 'user' | 'assistant' | 'system' | 'tool'}
+              reasoning={message.reasoning}
+            >
               {isStreaming ? (
                 <div className="flex items-center gap-2 text-zinc-400">
                   <div className="flex gap-1">

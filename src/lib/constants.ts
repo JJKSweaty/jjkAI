@@ -3,6 +3,8 @@ export const MODELS = [
   { id: 'claude-sonnet-4-5-20250929', name: 'Claude 4.5 Sonnet', description: 'Smart, efficient model for everyday use' },
   { id: 'claude-opus-4-1-20250805', name: 'Claude 4.1 Opus', description: 'Powerful, large model for complex challenges' },
   { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', description: 'Balanced performance' },
+  { id: 'deepseek-r1', name: 'DeepSeek R1', description: '🧠 Shows reasoning process' },
+  { id: 'o1-mini', name: 'OpenAI o1-mini', description: '🧠 Reasoning model' },
   
 ] as const;
 

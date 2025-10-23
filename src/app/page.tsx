@@ -225,6 +225,34 @@ export default function Page() {
         <div className="flex-1 flex flex-col">
           <MessageList messages={messages} streaming={streaming} threadId={currentThreadId} />
           
+          {/* Reasoning Info - Only show when no messages */}
+          {messages.length === 0 && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center space-y-4 max-w-2xl">
+                <h2 className="text-2xl font-semibold">🧠 AI Reasoning Ready!</h2>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>Your chat now supports transparent AI reasoning displays.</p>
+                  
+                  <div className="bg-muted/50 rounded-lg p-4 text-left">
+                    <p className="font-medium text-foreground mb-2">🤖 Models that show reasoning:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>• <strong>DeepSeek R1</strong> - Shows detailed thinking process</li>
+                      <li>• <strong>OpenAI o1/o1-mini</strong> - Step-by-step analysis</li>
+                      <li>• <strong>Claude (future versions)</strong> - Limited reasoning</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 text-left">
+                    <p className="font-medium text-foreground mb-2">⚠️ Current models:</p>
+                    <p className="text-xs">Your current Claude models don't provide reasoning data - they give direct responses only.</p>
+                  </div>
+                  
+                  <p className="text-xs">Start a conversation to see the reasoning components in action when using compatible models!</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Continuation Prompt - Show only when cost is high */}
           {continuationPrompt?.show && (
             <div className="sticky bottom-[76px] z-30 px-4 pb-3">

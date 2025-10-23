@@ -9,6 +9,7 @@ interface EnhancedChatStreamOptions extends ChatStreamOptions {
   threadId?: string;
   signal?: AbortSignal;
   onContinuationPrompt?: (data: { message: string; cost: number; continuationCount: number }) => void;
+  onReasoning?: (content: string, isStreaming: boolean, duration?: number) => void;
 }
 
 export async function streamChat({ 
@@ -24,7 +25,8 @@ export async function streamChat({
   onToken, 
   onDone, 
   onError,
-  onContinuationPrompt
+  onContinuationPrompt,
+  onReasoning
 }: EnhancedChatStreamOptions) {
   try {
     console.log('Connecting to:', `${process.env.NEXT_PUBLIC_API_BASE}/api/chat/stream`);
@@ -87,6 +89,15 @@ export async function streamChat({
               cost: (evt as any).cost,
               continuationCount: (evt as any).continuationCount
             });
+          }
+          if (evt.type === 'reasoning_start' && onReasoning) {
+            onReasoning('', true); // Start reasoning
+          }
+          if (evt.type === 'reasoning_delta' && evt.reasoning?.content && onReasoning) {
+            onReasoning(evt.reasoning.content, true); // Streaming reasoning content
+          }
+          if (evt.type === 'reasoning_end' && onReasoning) {
+            onReasoning(evt.reasoning?.content || '', false, evt.reasoning?.duration); // End reasoning
           }
         } catch (parseError) {
           console.error('Failed to parse SSE event:', parseError);

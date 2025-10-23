@@ -50,6 +50,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
   const [depthMode, setDepthMode] = useState<DepthMode>('Standard');
   const [usage, setUsage] = useState<ChatUsage>({ tokens: 0, cost: 0 });
   const [conversationSummary, setConversationSummary] = useState<ConversationSummary | null>(null);
+  const [currentReasoning, setCurrentReasoning] = useState<{ content: string; isStreaming: boolean; duration?: number } | null>(null);
   const [continuationPrompt, setContinuationPrompt] = useState<{
     show: boolean;
     message: string;
@@ -193,6 +194,16 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
           budget: prev.budget ? { ...prev.budget, used: currentOutput } : undefined
         }));
       },
+      onReasoning: (content: string, isStreaming: boolean, duration?: number) => {
+        setCurrentReasoning({ content, isStreaming, duration });
+        
+        // Update the current message with reasoning data
+        const updatedReply = { 
+          ...reply, 
+          reasoning: { content, isStreaming, duration } 
+        };
+        setMessages([...newMessages, updatedReply]);
+      },
       onContinuationPrompt: (data) => {
         // Only show for EXTREME costs (>$0.50) - effectively never for coding
         // 100 continuations = ~$0.50, so this rarely triggers
@@ -214,6 +225,7 @@ export function useChat({ threadId, onMessageSaved }: UseChatOptions = { threadI
         compressed?: boolean;
       }) => {
         setStreaming(false);
+        setCurrentReasoning(null); // Clear reasoning state
         
         // Calculate and save usage
         if (metadata && user) {
