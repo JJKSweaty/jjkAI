@@ -40,6 +40,11 @@ COPY --from=builder --chown=fastify:nodejs /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
+# Create dummy test file for pdf-parse bug workaround
+RUN mkdir -p ./test/data && \
+    echo "dummy" > ./test/data/05-versions-space.pdf && \
+    chown -R fastify:nodejs ./test
+
 USER fastify
 
 EXPOSE 8080

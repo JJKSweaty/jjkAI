@@ -81,7 +81,7 @@ export async function documentRoutes(fastify: FastifyInstance) {
       // Store chunks for retrieval with embeddings
       if (result.chunks.length > 0) {
         // Generate embeddings for all chunks (local model, no API key needed)
-        const { generateEmbeddingBatch } = await import("../lib/embeddings");
+        const { generateEmbeddingBatch } = await import("../lib/embeddings.js");
         let embeddings: number[][] = [];
         
         try {
