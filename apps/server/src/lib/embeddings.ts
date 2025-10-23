@@ -4,7 +4,11 @@
  * Uses Xenova Transformers (all-MiniLM-L6-v2) - 384 dimensions
  */
 
+import { env } from "@xenova/transformers";
 import { pipeline, type FeatureExtractionPipeline } from "@xenova/transformers";
+
+// Set cache directory before any pipeline operations
+env.cacheDir = process.env.XENOVA_CACHE_DIR || "/tmp/xenova-cache";
 
 // Singleton instance of the embedding pipeline
 let embedder: FeatureExtractionPipeline | null = null;
