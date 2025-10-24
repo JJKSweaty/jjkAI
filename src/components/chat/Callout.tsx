@@ -12,7 +12,7 @@ export function Callout({
   children: React.ReactNode;
 }) {
   const config = {
-    note: { icon: Info, bg: 'bg-zinc-900/60', border: 'border-zinc-800' },
+    note: { icon: Info, bg: 'bg-muted', border: 'border-border' },
     tip: { icon: CheckCircle2, bg: 'bg-emerald-950/30', border: 'border-emerald-900/40' },
     warning: { icon: AlertCircle, bg: 'bg-amber-950/30', border: 'border-amber-900/40' },
   }[type];

@@ -21,16 +21,16 @@ export function ChatBubble({
 }) {
   const base = 'w-full rounded-xl sm:rounded-2xl px-3 sm:px-4 md:px-5 py-3 sm:py-4 shadow-none animate-fadeIn';
   const styles = {
-    assistant: 'bg-zinc-950/60 border border-zinc-800',
-    user: 'bg-zinc-900 border border-zinc-800',
-    system: 'bg-amber-950/30 border border-amber-900/40',
-    tool: 'bg-sky-950/30 border border-sky-900/40 font-mono text-[0.92rem]',
+    assistant: 'bg-card border border-border',
+    user: 'bg-secondary border border-border',
+    system: 'bg-amber-950/30 border border-amber-900/40 dark:bg-amber-950/30 dark:border-amber-900/40',
+    tool: 'bg-sky-950/30 border border-sky-900/40 font-mono text-[0.92rem] dark:bg-sky-950/30 dark:border-sky-900/40',
   }[role];
 
   return (
     <div className="flex gap-2 sm:gap-3">
       <div className={cn(base, styles, 'flex-1 max-w-3xl overflow-hidden')}>
-        {meta && <div className="mb-2 text-xs text-zinc-400">{meta}</div>}
+        {meta && <div className="mb-2 text-xs text-muted-foreground">{meta}</div>}
         
         {/* Show reasoning for assistant messages only */}
         {reasoning && role === 'assistant' && (

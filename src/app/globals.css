@@ -104,8 +104,21 @@
   }
 }
 
+@keyframes rose-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.5)); /* rose-500 */
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.8)); /* rose-500 */
+  }
+}
+
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
+}
+
+.rose .animate-glow {
+  animation: rose-glow 2s ease-in-out infinite;
 }
 
 code, pre {
@@ -198,6 +211,93 @@ code, pre {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Rose Theme Code Blocks - Monokai with Pink & Black */
+.rose pre,
+.rose code {
+  background-color: #1a1a1a !important; /* Deep black background */
+}
+
+.rose .hljs {
+  color: #f8f8f2; /* Off-white text */
+  background: #1a1a1a; /* Deep black */
+}
+
+.rose .hljs-comment,
+.rose .hljs-quote {
+  color: #6272a4; /* Muted blue-grey */
+  font-style: italic;
+}
+
+.rose .hljs-keyword,
+.rose .hljs-selector-tag,
+.rose .hljs-literal,
+.rose .hljs-type {
+  color: #ff79c6; /* Hot pink */
+  font-weight: bold;
+}
+
+.rose .hljs-string,
+.rose .hljs-regexp {
+  color: #f1fa8c; /* Bright yellow */
+}
+
+.rose .hljs-subst,
+.rose .hljs-symbol {
+  color: #f8f8f2; /* Off-white */
+}
+
+.rose .hljs-class .hljs-title,
+.rose .hljs-title.class_ {
+  color: #50fa7b; /* Bright green */
+}
+
+.rose .hljs-function .hljs-title,
+.rose .hljs-title.function_ {
+  color: #50fa7b; /* Bright green */
+}
+
+.rose .hljs-variable,
+.rose .hljs-template-variable {
+  color: #f8f8f2; /* Off-white */
+}
+
+.rose .hljs-number,
+.rose .hljs-built_in {
+  color: #bd93f9; /* Purple */
+}
+
+.rose .hljs-params {
+  color: #ffb86c; /* Orange */
+}
+
+.rose .hljs-meta {
+  color: #8be9fd; /* Cyan */
+}
+
+.rose .hljs-attr {
+  color: #ffb86c; /* Orange */
+}
+
+.rose .hljs-attribute {
+  color: #50fa7b; /* Bright green */
+}
+
+.rose .hljs-tag {
+  color: #ff79c6; /* Hot pink */
+}
+
+.rose .hljs-emphasis {
+  font-style: italic;
+}
+
+.rose .hljs-strong {
+  font-weight: bold;
+}
+
+.rose .hljs-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
 /* Prose styles for markdown */
 .prose {
   @apply text-foreground;
@@ -266,28 +366,28 @@ code, pre {
 }
 
 .rose {
-  --background: 340 30% 82%;
-  --foreground: 340 25% 12%;
-  --card: 340 25% 85%;
-  --card-foreground: 340 25% 12%;
-  --primary: 340 70% 50%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 340 20% 75%;
-  --secondary-foreground: 340 25% 12%;
-  --muted: 340 15% 78%;
-  --muted-foreground: 340 15% 35%;
-  --accent: 340 20% 75%;
-  --accent-foreground: 340 25% 12%;
-  --border: 340 15% 70%;
-  --input: 340 15% 70%;
-  --ring: 340 70% 50%;
-  --sidebar: 340 30% 86%;
-  --sidebar-foreground: 340 30% 18%;
-  --sidebar-primary: 340 70% 50%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 340 20% 82%;
-  --sidebar-accent-foreground: 340 30% 18%;
-  --sidebar-border: 340 15% 78%;
+  --background: 340 15% 8%;
+  --foreground: 340 10% 95%;
+  --card: 340 12% 12%;
+  --card-foreground: 340 10% 95%;
+  --primary: 340 70% 65%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 340 8% 18%;
+  --secondary-foreground: 340 10% 95%;
+  --muted: 340 8% 15%;
+  --muted-foreground: 340 5% 65%;
+  --accent: 340 70% 65%;
+  --accent-foreground: 0 0% 0%;
+  --border: 340 8% 20%;
+  --input: 340 8% 20%;
+  --ring: 340 70% 65%;
+  --sidebar: 340 15% 8%;
+  --sidebar-foreground: 0 0% 15%;
+  --sidebar-primary: 340 70% 65%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 340 50% 35%;
+  --sidebar-accent-foreground: 0 0% 15%;
+  --sidebar-border: 340 15% 15%;
 }
 
 /* Selection color */
