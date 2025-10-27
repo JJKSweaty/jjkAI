@@ -217,6 +217,7 @@ export default function Page() {
               threadId={currentThreadId}
               onStop={stopGeneration}
               isGenerating={streaming}
+              recentMessages={messages}
             />
           </div>
         </div>
@@ -284,6 +285,7 @@ export default function Page() {
                 threadId={currentThreadId}
                 onStop={stopGeneration}
                 isGenerating={streaming}
+                recentMessages={messages}
               />
             </div>
           </div>

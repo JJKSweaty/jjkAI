@@ -7,6 +7,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import Anthropic from "@anthropic-ai/sdk";
 import { searchChunks, generateCitations, buildContext, formatCitation } from "../lib/retrieval.js";
 import type { CitationSource } from "../types/documents.js";
+import { getContextManager } from "../lib/context/contextManager.js";
+import { ResponseCompressor } from "../lib/responseCompressor.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -63,11 +65,44 @@ export async function ragChatRoutes(fastify: FastifyInstance) {
           });
         }
 
-        // Step 2: Generate citations
+        const sessionId = request.headers["x-session-id"] || request.id;
+        const contextManager = getContextManager(String(sessionId));
+
+        // Step 2: Add user message to context before retrieval
+        await contextManager.addResponseChunk(
+          `User: ${query}`,
+          "user",
+          {
+            tokens: ResponseCompressor.estimateTokens(query),
+            session: request.id,
+          }
+        );
+
+        // Step 3: Add retrieved document chunks to context manager
+        contextManager.addDocumentChunks(
+          searchResults.map((result) => ({
+            content: result.chunk.text,
+            metadata: {
+              source: result.chunk.meta.title,
+              docId: result.chunk.docId,
+              pageStart: result.chunk.meta.pageStart,
+              pageEnd: result.chunk.meta.pageEnd,
+              sectionPath: result.chunk.meta.sectionPath,
+              chunkId: result.chunk.id,
+              retrievalScore: result.score,
+            },
+          }))
+        );
+
+        // Step 4: Generate citations
         const citations = generateCitations(searchResults);
 
-        // Step 3: Build context for LLM
-        const context = buildContext(searchResults, citations);
+        // Step 5: Build context for LLM using both document chunks and conversation history
+        const ragContext = buildContext(searchResults, citations);
+        const conversationContext = contextManager.getOptimizedContext();
+        const combinedContext = [ragContext, conversationContext]
+          .filter((section) => section && section.trim().length > 0)
+          .join("\n\n---\n\n");
 
         // Step 4: Create system prompt with instructions
         const systemPrompt = `You are a helpful AI assistant that answers questions using only the provided document excerpts.
@@ -88,7 +123,7 @@ When answering:
         const userPrompt = `QUESTION: ${query}
 
 SOURCES:
-${context}
+${combinedContext}
 
 Answer the question using only the sources above. Remember to cite with [number].`;
 
@@ -109,6 +144,18 @@ Answer the question using only the sources above. Remember to cite with [number]
           response.content[0].type === "text"
             ? response.content[0].text
             : "No response generated";
+
+        // Step 7: Add assistant response to context for future turns
+        await contextManager.addResponseChunk(
+          `Assistant: ${answer}`,
+          "assistant",
+          {
+            model,
+            citations: citations.map((citation) => citation.index),
+            tokens: response.usage?.output_tokens || 0,
+            session: request.id,
+          }
+        );
 
         // Step 6: Format citations for display
         const formattedCitations = citations.map((c) => ({

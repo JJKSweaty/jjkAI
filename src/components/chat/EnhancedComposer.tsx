@@ -18,6 +18,11 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
+import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
@@ -67,6 +72,7 @@ interface EnhancedComposerProps {
   onPdfUploaded?: (documentId: string) => void; // Callback when PDF is uploaded
   onStop?: () => void; // Callback to stop generation
   isGenerating?: boolean; // Whether AI is currently generating a response
+  recentMessages?: { role: 'user' | 'assistant'; content: string }[];
 }
 
 export function EnhancedComposer({ 
@@ -84,7 +90,8 @@ export function EnhancedComposer({
   threadId,
   onPdfUploaded,
   onStop,
-  isGenerating = false
+  isGenerating = false,
+  recentMessages = [],
 }: EnhancedComposerProps) {
   const [text, setText] = React.useState('');
   const [context, setContext] = React.useState('');
@@ -92,9 +99,14 @@ export function EnhancedComposer({
   const [isProcessingFiles, setIsProcessingFiles] = React.useState(false);
   const [sources, setSources] = React.useState<'All Sources' | 'Local' | 'Web'>('All Sources');
   const [showContext, setShowContext] = React.useState(false);
+  const [isContextPopoverOpen, setIsContextPopoverOpen] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const lastMessages = React.useMemo(() => {
+    return recentMessages.slice(-4);
+  }, [recentMessages]);
 
   // Auto-resize textarea based on content
   React.useEffect(() => {
@@ -179,6 +191,12 @@ export function EnhancedComposer({
     
     // Reset input
     e.target.value = '';
+  };
+
+  const applyContextSnippet = (content: string) => {
+    setText((prev) => (prev ? `${prev}\n\n${content}` : content));
+    setIsContextPopoverOpen(false);
+    textareaRef.current?.focus();
   };
 
   const removeFile = (id: string) => {
@@ -371,7 +389,6 @@ export function EnhancedComposer({
                     onChange={handleFileSelect}
                     accept="*/*"
                   />
-
                   {/* Attachment button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -474,22 +491,88 @@ export function EnhancedComposer({
                       </DropdownMenu>
                     </Tooltip>
                   ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => setShowContext(!showContext)}
-                          className={cn(
-                            'h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors',
-                            showContext && "bg-accent/50 text-foreground"
-                          )}
-                        >
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Add context</TooltipContent>
-                    </Tooltip>
+                    <div className="flex gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => setShowContext(!showContext)}
+                            className={cn(
+                              'h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors',
+                              showContext && "bg-accent/50 text-foreground"
+                            )}
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Add context</TooltipContent>
+                      </Tooltip>
+                      {lastMessages.length > 0 && (
+                        <Popover open={isContextPopoverOpen} onOpenChange={setIsContextPopoverOpen}>
+                          <Tooltip>
+                            <PopoverTrigger asChild>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors"
+                                >
+                                  <Sparkles className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                            </PopoverTrigger>
+                            <TooltipContent>Continue from context</TooltipContent>
+                          </Tooltip>
+                          <PopoverContent className="w-80" align="start">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">Recent context</p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    applyContextSnippet(
+                                      lastMessages
+                                        .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+                                        .join('\n\n')
+                                    );
+                                  }}
+                                >
+                                  Insert all
+                                </Button>
+                              </div>
+                              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                {lastMessages.map((msg, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="rounded-md border border-border/40 p-2 text-xs bg-muted/40"
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="font-medium text-muted-foreground">
+                                        {msg.role === 'user' ? 'User' : 'Assistant'}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 text-[10px]"
+                                        onClick={() => applyContextSnippet(`${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)}
+                                      >
+                                        Insert
+                                      </Button>
+                                    </div>
+                                    <p className="text-muted-foreground whitespace-pre-wrap">
+                                      {msg.content.length > 240 ? `${msg.content.slice(0, 240)}…` : msg.content}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
                   )}
                 </div>
 
