@@ -97,8 +97,11 @@ export async function POST(req: NextRequest) {
       ]
     });
     
-    const responseText = message.content[0].text;
-    
+    const responseText = message.content
+      .map((block) => (block.type === 'text' ? block.text : ''))
+      .filter((text) => text.trim().length > 0)
+      .join('\n\n');
+
     // 6. Add AI response to context
     await contextManager.addResponseChunk(`Assistant: ${responseText}`, {
       type: 'assistant',

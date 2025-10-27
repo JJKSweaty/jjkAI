@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -49,7 +49,7 @@ export default function TokenAnalyticsPage() {
   const [models, setModels] = useState<any[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const params: PeriodParams = {
@@ -82,11 +82,11 @@ export default function TokenAnalyticsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange.from, dateRange.to, selectedModel, showMyUsage, user]);
 
   useEffect(() => {
     fetchData();
-  }, [dateRange, selectedModel, showMyUsage, user]);
+  }, [fetchData]);
 
   const handleDateRangeChange = (from: string, to: string) => {
     setDateRange({ from, to });
